@@ -6,7 +6,7 @@ Built at HackRU, Oct 10 to 11, 2026. Design: [`docs/superpowers/specs/2026-10-10
 
 ## Setup
 
-Needs Node 22 or newer.
+Needs Node 22.12 or newer.
 
 ```bash
 gh repo clone mlhv/RUConnect && cd RUConnect
@@ -33,8 +33,8 @@ To use the shared Tiger database, set `DATABASE_URL` and `MOCK=0`, then run `npm
 
 | Slice | Folders | Owner now |
 |---|---|---|
-| A: Map | `client/src/map/` | P1 |
-| B: Ingest | `server/src/ingest/`, `client/src/ingest/`, `data/captures/` | P2 |
+| A: Map | `client/src/map/`, `data/buildings.json` | P1 |
+| B: Ingest | `server/src/ingest/`, `client/src/ingest/`, `data/captures/`, `data/extraction.cache.json` | P2 |
 | C: Voice | `server/src/voice/`, `client/src/voice/` | P3 |
 
 `shared/`, `server/src/core/`, `client/src/app/`, and root config are frozen: change them only in a pull request titled `contract:` that all three of us agree to first.
@@ -48,4 +48,4 @@ To use the shared Tiger database, set `DATABASE_URL` and `MOCK=0`, then run `npm
 
 ## Data
 
-`data/buildings.json` has approximate coordinates and rectangular footprints. `data/events.seed.json` is sample data. Both need replacing with real College Ave data.
+`data/buildings.json` has approximate coordinates and rectangular footprints. `data/events.seed.json` is sample data. Both need replacing with real College Ave data. `data/events.seed.json` is shared: anyone may add events to it (add your own entries, do not edit or delete someone else's; on a merge conflict keep both sides). The schemas of both files (`BuildingSeedSchema`, `SeedEventSchema`) are frozen.

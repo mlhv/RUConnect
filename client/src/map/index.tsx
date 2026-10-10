@@ -40,6 +40,9 @@ export function MapView() {
         const b = useEventsStore.getState().buildings.find((x) => x.id === buildingId);
         if (b) map.flyTo({ center: [b.lng, b.lat], zoom: 17.5, pitch: 60, duration: 2000 });
       },
+      openBuilding() {
+        // Slice A implements the building panel here.
+      },
       highlight(buildingIds) {
         controller.clearHighlight();
         for (const id of buildingIds) map.setFeatureState({ source: SOURCE, id }, { highlight: true });

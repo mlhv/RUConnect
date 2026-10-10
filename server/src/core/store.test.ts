@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { loadSeed } from './seed';
+import { testFixture } from './testFixture';
 import { MemoryStore } from './store';
 
 const make = () => {
-  const seed = loadSeed();
+  const seed = testFixture();
   return new MemoryStore(seed.buildings, seed.events);
 };
 

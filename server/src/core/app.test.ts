@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Express } from 'express';
 import { createApp } from './app';
 import { loadConfig } from './config';
-import { loadSeed } from './seed';
+import { testFixture } from './testFixture';
 import { MemoryStore } from './store';
 
 let app: Express;
 beforeEach(() => {
-  const seed = loadSeed();
+  const seed = testFixture();
   app = createApp({
     config: loadConfig({ MOCK: '1', DEMO_NOW: '2026-10-10T19:30:00-04:00' }),
     store: new MemoryStore(seed.buildings, seed.events),
@@ -30,13 +30,13 @@ describe('core API', () => {
   it('lists buildings with footprints', async () => {
     const res = await request(app).get('/api/buildings');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(12);
+    expect(res.body).toHaveLength(4);
     expect(res.body[0].footprint.length).toBeGreaterThanOrEqual(4);
   });
 
   it('lists published events and filters by window', async () => {
     const all = await request(app).get('/api/events');
-    expect(all.body).toHaveLength(12);
+    expect(all.body).toHaveLength(6);
     const win = await request(app)
       .get('/api/events')
       .query({ from: '2026-10-11T00:00:00-04:00', to: '2026-10-11T23:59:00-04:00' });

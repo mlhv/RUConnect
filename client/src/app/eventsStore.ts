@@ -26,7 +26,8 @@ export const useEventsStore = create<EventsState>((set) => ({
     try {
       const [buildings, events, config] = await Promise.all([api.buildings(), api.events(), api.config()]);
       set({ buildings, events, offline: false, selectedTime: config.now ?? new Date().toISOString() });
-    } catch {
+    } catch (err) {
+      console.warn('Could not load from the API, showing bundled seed data:', err);
       set({ buildings: parseSeedBuildings(seedBuildings), events: parseSeedEvents(seedEvents), offline: true });
     }
   },

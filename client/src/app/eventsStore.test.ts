@@ -1,24 +1,31 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useEventsStore } from './eventsStore';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const json = (data: unknown) => Promise.resolve(new Response(JSON.stringify(data), { status: 200 }));
 
 describe('useEventsStore.load', () => {
   it('falls back to bundled seed data when the API is unreachable', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     await useEventsStore.getState().load();
     const s = useEventsStore.getState();
     expect(s.offline).toBe(true);
-    expect(s.buildings).toHaveLength(12);
-    expect(s.events.length).toBeGreaterThanOrEqual(10);
+    expect(s.buildings.length).toBeGreaterThan(0);
+    expect(s.events.length).toBeGreaterThan(0);
+    expect(warn).toHaveBeenCalledOnce();
   });
 
   it('falls back when the API answers with an error status', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"error":"internal"}', { status: 500 })));
     await useEventsStore.getState().load();
     expect(useEventsStore.getState().offline).toBe(true);
+    expect(warn).toHaveBeenCalledOnce();
   });
 
   it('uses API data and DEMO_NOW when the API responds', async () => {

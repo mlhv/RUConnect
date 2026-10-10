@@ -1,6 +1,6 @@
 import { loadConfig, loadEnvFile } from '../config';
 import { loadSeed } from '../seed';
-import { migrate, reset, seedDb } from './migrate';
+import { assertNamedSchema, migrate, reset, seedDb } from './migrate';
 import { createPool } from './pool';
 
 const command = process.argv[2];
@@ -12,10 +12,12 @@ if (!COMMANDS.includes(command)) {
 
 loadEnvFile();
 // Database commands always need a real database, whatever MOCK says.
-const config = loadConfig({ ...process.env, MOCK: '0' });
-const pool = createPool(config.databaseUrl!, config.dbSchema);
+let pool: ReturnType<typeof createPool> | undefined;
 
 try {
+  const config = loadConfig({ ...process.env, MOCK: '0' });
+  assertNamedSchema(config.dbSchema);
+  pool = createPool(config.databaseUrl!, config.dbSchema);
   if (command === 'reset') {
     await reset(pool, config.dbSchema);
     console.log(`Dropped schema ${config.dbSchema}`);
@@ -33,5 +35,5 @@ try {
   console.error((err as Error).message);
   process.exitCode = 1;
 } finally {
-  await pool.end();
+  await pool?.end();
 }

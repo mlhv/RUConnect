@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type pg from 'pg';
-import { loadSeed } from '../seed';
 import { migrate, seedDb } from './migrate';
 import { PgStore } from './pgStore';
 import { createPool } from './pool';
+import { testFixture } from '../testFixture';
 
 const url = process.env.TEST_DATABASE_URL;
 const schema = `test_${Date.now()}`;
@@ -15,7 +15,7 @@ describe.skipIf(!url)('PgStore against a real database', () => {
   beforeAll(async () => {
     pool = createPool(url!, schema);
     await migrate(pool, schema);
-    const seed = loadSeed();
+    const seed = testFixture();
     await seedDb(pool, schema, seed.buildings, seed.events);
     store = new PgStore(pool);
   });
@@ -31,7 +31,7 @@ describe.skipIf(!url)('PgStore against a real database', () => {
 
   it('returns seeded buildings with footprints', async () => {
     const buildings = await store.listBuildings();
-    expect(buildings).toHaveLength(12);
+    expect(buildings).toHaveLength(4);
     expect(buildings[0].footprint.length).toBeGreaterThanOrEqual(4);
   });
 

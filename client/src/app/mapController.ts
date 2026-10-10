@@ -10,6 +10,7 @@ export function registerMapController(controller: MapController | null): void {
 /** Other slices import this. Calls made before the map is ready are dropped. */
 export const mapController: MapController = {
   flyTo: (buildingId) => current?.flyTo(buildingId),
+  openBuilding: (buildingId) => current?.openBuilding(buildingId),
   highlight: (buildingIds) => current?.highlight(buildingIds),
   clearHighlight: () => current?.clearHighlight(),
   setTime: (iso) => current?.setTime(iso),

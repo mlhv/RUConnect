@@ -21,6 +21,10 @@ export function pendingMigrations(all: string[], applied: string[]): string[] {
   return all.filter((name) => !done.has(name));
 }
 
+export function assertNamedSchema(schema: string): void {
+  if (schema === 'dev_yourname') throw new Error('Set DB_SCHEMA in .env to your own name (dev_<yourname>), not the placeholder');
+}
+
 export function assertResettable(schema: string): void {
   if (schema === 'prod') throw new Error('Refusing to reset the prod schema');
   if (schema === 'public') throw new Error('Refusing to reset the public schema: it holds the shared vector extension');
