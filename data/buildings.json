@@ -1,0 +1,14 @@
+[
+  { "id": "student-center", "name": "Rutgers Student Center", "aliases": ["RSC", "Student Center", "College Ave Student Center", "126 College Ave"], "lng": -74.4517, "lat": 40.5028, "heightM": 14, "widthM": 70, "depthM": 50 },
+  { "id": "alexander-library", "name": "Alexander Library", "aliases": ["Alex", "Alexander", "169 College Ave"], "lng": -74.4527, "lat": 40.5046, "heightM": 20, "widthM": 80, "depthM": 60 },
+  { "id": "scott-hall", "name": "Scott Hall", "aliases": ["Scott", "SC", "43 College Ave"], "lng": -74.4478, "lat": 40.4999, "heightM": 14, "widthM": 60, "depthM": 35 },
+  { "id": "academic-building", "name": "Academic Building", "aliases": ["AB", "15 Seminary Place"], "lng": -74.4480, "lat": 40.5010, "heightM": 22, "widthM": 90, "depthM": 30 },
+  { "id": "college-ave-gym", "name": "College Avenue Gym", "aliases": ["The Barn", "College Ave Gym", "130 College Ave"], "lng": -74.4522, "lat": 40.5034, "heightM": 16, "widthM": 60, "depthM": 45 },
+  { "id": "voorhees-hall", "name": "Voorhees Hall", "aliases": ["Voorhees", "VH", "71 Hamilton St"], "lng": -74.4462, "lat": 40.4993, "heightM": 15, "widthM": 50, "depthM": 30 },
+  { "id": "zimmerli", "name": "Zimmerli Art Museum", "aliases": ["Zimmerli", "Art Museum"], "lng": -74.4458, "lat": 40.4999, "heightM": 12, "widthM": 60, "depthM": 40 },
+  { "id": "the-yard", "name": "The Yard", "aliases": ["Yard", "The Yard @ College Ave", "40 College Ave"], "lng": -74.4484, "lat": 40.5003, "heightM": 25, "widthM": 50, "depthM": 40 },
+  { "id": "murray-hall", "name": "Murray Hall", "aliases": ["Murray", "MU", "510 George St"], "lng": -74.4470, "lat": 40.4990, "heightM": 15, "widthM": 45, "depthM": 25 },
+  { "id": "brower-commons", "name": "Brower Commons", "aliases": ["Brower", "145 College Ave"], "lng": -74.4513, "lat": 40.5031, "heightM": 12, "widthM": 60, "depthM": 45 },
+  { "id": "honors-college", "name": "Honors College", "aliases": ["HC", "Honors"], "lng": -74.4478, "lat": 40.5018, "heightM": 20, "widthM": 70, "depthM": 35 },
+  { "id": "kirkpatrick-chapel", "name": "Kirkpatrick Chapel", "aliases": ["Kirkpatrick", "Chapel"], "lng": -74.4455, "lat": 40.4988, "heightM": 18, "widthM": 25, "depthM": 40 }
+]

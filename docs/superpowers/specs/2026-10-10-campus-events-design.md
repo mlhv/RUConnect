@@ -77,8 +77,8 @@ All routes are under `/api`. Request and response shapes are zod schemas in `sha
 | `GET /events?from=&to=&buildingId=&status=` | List events; default `status=published` |
 | `POST /events` | Create a manual event |
 | `PATCH /events/:id` | Edit or approve a `needs_review` event |
-| `GET /events/activity?from=&to=&bucket=30m` | Per-building active-event counts per time bucket, using `time_bucket` |
-| `POST /events/search` | `{query, from, to, freeFood, nearBuildingId}` to ranked events: time and flag filters, then vector similarity on the query embedding |
+| `GET /events/activity?from=&to=&bucket=30m` | Not built. The map derives per-building activity from the events already in `useEventsStore` |
+| `POST /voice/search` | `{query, from, to, freeFood, nearBuildingId}` to ranked events: time and flag filters, then vector similarity on the query embedding |
 | `POST /ingest/runs` | Start a run from multipart image uploads, or `{capture: "instagram" \| "board"}` |
 | `GET /ingest/runs/:id/stream` | Server-Sent Events of worker steps |
 | `GET /voice/session` | Short-lived ElevenLabs conversation credential for the browser |
@@ -119,6 +119,7 @@ Other slices reach the map only through the controller interface defined in `sha
 ```ts
 interface MapController {
   flyTo(buildingId: string): void;
+  openBuilding(buildingId: string): void;
   highlight(buildingIds: string[]): void;
   clearHighlight(): void;
   setTime(iso: string): void;
@@ -131,12 +132,12 @@ An ElevenLabs Conversational AI agent, configured once in the ElevenLabs dashboa
 
 The agent has two client tools, implemented in `client/src/voice/`:
 
-- `find_events({query, from, to, freeFood, nearBuildingName})` calls `POST /api/events/search`, highlights the matching buildings, sets the slider to the earliest result, and returns a compact list (title, building, time, free food) for the agent to speak from.
-- `focus_event({eventId})` flies the camera to that event's building and opens its panel.
+- `find_events({query, from, to, freeFood, nearBuildingName})` calls `POST /api/voice/search`, highlights the matching buildings, sets the slider to the earliest result, and returns a compact list (title, building, time, free food) for the agent to speak from.
+- `focus_event({eventId})` flies the camera to that event's building (`flyTo`) and opens its panel (`openBuilding`).
 
 The agent prompt tells it the current date and time, the building names, and to always call `find_events` before recommending anything.
 
-Fallback if the agent connection fails: a text box sends the same query to `/api/events/search`, the map reacts the same way, and the top result is read with the browser's `speechSynthesis`.
+Fallback if the agent connection fails: a text box sends the same query to `/api/voice/search`, the map reacts the same way, and the top result is read with the browser's `speechSynthesis`.
 
 ## 8. Repo layout and ownership
 
