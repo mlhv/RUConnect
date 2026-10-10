@@ -1,4 +1,4 @@
-# Campus Events Map: Design Spec
+# RUConnect: Design Spec
 
 Date: 2026-10-10. Event: HackRU, 18 hours from 6:15 PM Oct 10, feature freeze 9:00 AM Oct 11, submit by 11:30 AM.
 Source brief: `brainstorm.md` (copied into the repo root). Where this spec and the brief disagree, this spec wins.
@@ -193,8 +193,8 @@ Done once by the repo owner (`mlhv`), as the first task of the implementation pl
 
 1. `git init` in the project folder; the spec is the first commit.
 2. Scaffold the layout in section 8, including a foundation that runs end to end in `MOCK=1`: map renders seeded buildings, `/api/events` returns seeds, each slice folder has a stub and its `CLAUDE.md`.
-3. Create the GitHub repo: `gh repo create mlhv/hackru-campus-events --private --source . --push`. The name can be changed before this step.
-4. Invite each teammate with write access: `gh api -X PUT repos/mlhv/hackru-campus-events/collaborators/<username> -f permission=push`. This needs the two teammates' GitHub usernames. They accept from the email or from github.com/notifications.
+3. Create the GitHub repo: `gh repo create mlhv/RUConnect --private --source . --push`. The name can be changed before this step.
+4. Invite each teammate with write access: `gh api -X PUT repos/mlhv/RUConnect/collaborators/<username> -f permission=push`. This needs the two teammates' GitHub usernames. They accept from the email or from github.com/notifications.
 5. Protect `main`. GitHub does not enforce branch protection on private repos under a free personal plan, so the baseline is the `pre-push` hook (enabled for everyone by an npm `prepare` script that sets `core.hooksPath`) plus CI on every pull request. If the repo is made public for submission, also add a ruleset requiring a pull request and a passing CI check.
 6. Create the shared services and send the values to teammates outside git: one Tiger service (`DATABASE_URL`), one ElevenLabs agent (`ELEVENLABS_AGENT_ID` and API key), the Gemini key or one key each, and a Mapbox public token.
 7. Run `npm run db:setup` once with `DB_SCHEMA=prod` for the deployed app.
@@ -202,7 +202,7 @@ Done once by the repo owner (`mlhv`), as the first task of the implementation pl
 Teammate onboarding, also in `README.md`:
 
 ```
-gh repo clone mlhv/hackru-campus-events && cd hackru-campus-events
+gh repo clone mlhv/RUConnect && cd RUConnect
 cp .env.example .env        # paste shared keys, set DB_SCHEMA=dev_<yourname>
 npm install                 # also installs the pre-push hook
 npm run db:setup
