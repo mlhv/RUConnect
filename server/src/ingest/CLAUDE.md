@@ -1,6 +1,6 @@
 # Slice B: Ingest (server)
 
-Owner: P2 (update this line at each rotation).
+Owner: Ben (update this line at each rotation).
 
 Owns `server/src/ingest/`, `client/src/ingest/`, and `data/captures/`. Design: spec section 5.
 
