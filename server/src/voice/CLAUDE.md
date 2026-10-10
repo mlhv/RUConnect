@@ -1,6 +1,6 @@
 # Slice C: Voice (server)
 
-Owner: P3 (update this line at each rotation).
+Owner: mlhv (update this line at each rotation).
 
 Owns `server/src/voice/` and `client/src/voice/`. Design: spec section 7.
 
