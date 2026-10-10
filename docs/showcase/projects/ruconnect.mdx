@@ -1,0 +1,67 @@
+---
+title: RUConnect
+description: A 3D map of Rutgers campus events with a voice agent that finds something to do and flies the map to it. Flyers become events through a Gemini agent swarm.
+authorIds:
+  - mlhv
+  - bxnkuoch
+  - chaitanya-kadlan
+categories:
+  - agents
+isFeatured: false
+date: "2026-10-11"
+image: /images/ruconnect.png
+repoUrl: https://github.com/mlhv/RUConnect
+---
+
+# RUConnect
+
+## Overview
+
+Campus events are scattered across paper flyers, club Instagram posts, and event boards, so students miss things they would have loved. RUConnect puts every event on Rutgers College Ave onto one 3D map. Buildings light up when something is happening inside, and a time slider shows activity moving across campus through the day.
+
+The fastest way to use it is to ask. An ElevenLabs Conversational AI agent takes a spoken question such as "I'm free until 4 and I like robotics and free food, what's near the library?", searches the events, answers out loud, and flies the map camera to the building it recommends.
+
+## Key Features
+
+- Voice assistant: an ElevenLabs agent that searches events by time, interests, and location, speaks its recommendation, and drives the map.
+- 3D campus map: real College Ave buildings that glow when an event is active, with a slider to scrub through the day.
+- Flyer ingestion swarm: Gemini workers read a photo of a flyer (even a crumpled one), match it to a building, remove duplicates, and publish the event.
+- Multiple sources: uploaded flyers, club Instagram posts, and event-board listings all go through the same pipeline.
+
+## How It Works
+
+The browser connects to an ElevenLabs Conversational AI agent with the `@elevenlabs/react` SDK, using a short-lived session credential issued by our server so the API key never reaches the client. The agent has two client tools. `find_events` calls our search endpoint, highlights the matching buildings on the map, and returns a compact list for the agent to speak from. `focus_event` flies the camera to the chosen event's building and opens its panel.
+
+Events come from an ingestion swarm: an orchestrator in our Express server fans out Gemini calls with fixed roles (reader, locator, deduper, verifier) and streams each step to the UI. Events are stored in Postgres on Tiger Data with `pgvector` embeddings, which power both duplicate detection and the semantic part of voice search.
+
+## Technologies Used
+
+- ElevenLabs Conversational AI (agent, client tools, `@elevenlabs/react`)
+- Gemini API (vision extraction, embeddings)
+- Mapbox GL JS, React, Vite
+- Node, Express, TypeScript
+- Tiger Data Postgres with pgvector
+
+## Getting Started
+
+```bash
+git clone https://github.com/mlhv/RUConnect.git && cd RUConnect
+cp .env.example .env   # add your ElevenLabs, Gemini, and Mapbox keys
+npm install
+npm run dev            # http://localhost:5173
+```
+
+## Demo
+
+Add a screenshot or the demo video here.
+
+## Future Plans
+
+- Live crowd "energy" per building from ambient sound levels
+- Accessibility routes and audio descriptions
+- Interest-based recommendations and "go with a friend" matching
+- More campuses
+
+## Acknowledgments
+
+Built at HackRU, October 2026.

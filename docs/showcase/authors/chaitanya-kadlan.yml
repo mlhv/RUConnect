@@ -1,0 +1,9 @@
+# DRAFT. Rename this file to your-full-name.yml (kebab-case) and fill in every FILL IN before submitting.
+name: FILL IN full name
+avatar: "https://github.com/CHAITANYA-KADlAN.png"
+bio: "FILL IN one sentence about yourself"
+location: "FILL IN City, Country"
+isElevenLabs: false
+socials:
+  - label: GitHub
+    url: "https://github.com/CHAITANYA-KADlAN"
