@@ -37,4 +37,8 @@ describe('assertResettable', () => {
     expect(() => assertResettable('prod')).toThrow(/prod/);
     expect(() => assertResettable('dev_minh')).not.toThrow();
   });
+
+  it('refuses public, which holds the shared vector extension', () => {
+    expect(() => assertResettable('public')).toThrow(/public/);
+  });
 });

@@ -23,6 +23,7 @@ export function pendingMigrations(all: string[], applied: string[]): string[] {
 
 export function assertResettable(schema: string): void {
   if (schema === 'prod') throw new Error('Refusing to reset the prod schema');
+  if (schema === 'public') throw new Error('Refusing to reset the public schema: it holds the shared vector extension');
 }
 
 /** Applies unapplied migrations in name order, one transaction each. Returns the names applied. */
@@ -44,7 +45,8 @@ export async function migrate(pool: pg.Pool, schema: string, dir = MIGRATIONS_DI
       await client.query(`INSERT INTO "${schema}"._migrations (name) VALUES ($1)`, [name]);
       await client.query('COMMIT');
     } catch (err) {
-      await client.query('ROLLBACK');
+      // A dead connection makes ROLLBACK throw too; that must not mask the migration error.
+      await client.query('ROLLBACK').catch(() => {});
       throw new Error(`Migration ${name} failed: ${(err as Error).message}`);
     } finally {
       client.release();
