@@ -1,0 +1,22 @@
+.voice-status { margin: 0 0 8px; font-size: 12px; color: #a8b3c7; }
+.voice-status.warn { color: #ffd166; }
+.voice-transcript {
+  max-height: 220px; overflow-y: auto; margin: 0 0 8px; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: 6px; font-size: 13px;
+}
+.voice-transcript li { padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); }
+.voice-transcript li.user { align-self: flex-end; background: #2b4a8c; }
+.voice-transcript li.tool, .voice-transcript li.system { background: none; padding: 0 2px; font-size: 12px; color: #a8b3c7; }
+.voice-row { display: flex; gap: 8px; }
+.voice-row + .voice-row { margin-top: 8px; }
+.voice-row input {
+  flex: 1; min-width: 0; padding: 8px 10px; border-radius: 8px; border: 1px solid #33405e;
+  background: #0d1220; color: inherit; font: inherit; font-size: 13px;
+}
+.voice-row button {
+  padding: 8px 12px; border-radius: 8px; border: 0; background: #3d6bd6; color: #fff;
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.voice-row button.secondary { background: #33405e; }
+.voice-row button.active { background: #c0392b; }
+.voice-row button:disabled { opacity: 0.5; cursor: default; }
