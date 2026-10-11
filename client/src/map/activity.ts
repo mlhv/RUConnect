@@ -27,3 +27,21 @@ export function buildingCategories(events: CampusEvent[], iso: string): Map<stri
   }
   return new Map([...best].map(([buildingId, e]) => [buildingId, e.category]));
 }
+
+/** Total expected attendance of each active building's published events at `iso`. Unknown counts as 0. */
+export function buildingAttendance(events: CampusEvent[], iso: string): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const e of events) {
+    if (e.status !== 'published' || !isActiveAt(e, iso)) continue;
+    totals.set(e.buildingId, (totals.get(e.buildingId) ?? 0) + (e.expectedAttendance ?? 0));
+  }
+  return totals;
+}
+
+const BEACON_MIN_M = 10;
+const BEACON_MAX_M = 100;
+
+/** Beacon height for a crowd size. The square root keeps a 30-person meeting visible beside a 300-person concert. */
+export function beaconHeightM(attendance: number): number {
+  return Math.min(BEACON_MAX_M, BEACON_MIN_M + 6 * Math.sqrt(attendance));
+}

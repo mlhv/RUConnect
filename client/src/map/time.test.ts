@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SLIDER_STEPS, sliderIndex, timeAtIndex } from './time';
+import { SLIDER_STEPS, nextStep, sliderIndex, timeAtIndex } from './time';
 
 describe('time slider math', () => {
   const noon = '2026-10-10T16:07:00.000Z';
@@ -19,5 +19,17 @@ describe('time slider math', () => {
   it('clamps out-of-range indexes', () => {
     expect(timeAtIndex(noon, -5)).toBe(timeAtIndex(noon, 0));
     expect(timeAtIndex(noon, 500)).toBe(timeAtIndex(noon, SLIDER_STEPS - 1));
+  });
+});
+
+describe('nextStep', () => {
+  const noon = '2026-10-10T16:07:00.000Z';
+
+  it('moves one step later on the same day', () => {
+    expect(sliderIndex(nextStep(timeAtIndex(noon, 54))!)).toBe(55);
+  });
+
+  it('returns null at the last step of the day', () => {
+    expect(nextStep(timeAtIndex(noon, SLIDER_STEPS - 1))).toBeNull();
   });
 });

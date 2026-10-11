@@ -10,6 +10,9 @@ Seen in Chrome on Oct 11 with a real `VITE_MAPBOX_TOKEN`, `MOCK=0`, and the type
 - Lit buildings also get a soft ring of their color on the ground (the `ru-buildings-glow` line layer) and their name floating over the roof. Edges are slightly rounded.
 - The basemap's own buildings are drawn as dim 3D context (`ru-context-3d`). A `distance` filter hides the basemap's copy of each of our 12, so the two never overlap.
 - `flyTo` eases in and out over about 3 seconds while swinging the camera round, then circles the building slowly. Any map input, or another flight, stops the circling.
+- Attendance beacons: a thin column stands on the roof of each active building, in its category color, taller for a bigger expected crowd (`beaconHeightM` in `activity.ts`, square-root scale from 10 m to 100 m). The column stands at the building's center, which for a U-shaped building (The Yard, Honors College) is over the courtyard.
+- The slider has a play button: it steps 15 minutes about twice a second and stops at the end of the day or when the slider is dragged. Pressed at the end of the day, it restarts from 8 AM.
+- On load the camera eases in to its opening view over about 4 seconds.
 - `flyTo` pads the camera so the target lands clear of the sidebar (`cameraPadding` in `geo.ts`). The padding assumes the sidebar size in `client/src/app/app.css`; change both together.
 - A typed voice question highlights its results, moves the slider, flies to the top pick, and opens its panel.
 - `data/buildings.json` has real outlines and centers from OpenStreetMap for all 12 buildings, and they line up with the basemap. With `MOCK=0` buildings come from the database: run `npm run db:seed` on your own schema to pick them up (it updates building rows and keeps your events), or `npm run db:reset` for a clean slate.
@@ -26,7 +29,6 @@ Seen in Chrome on Oct 11 with a real `VITE_MAPBOX_TOKEN`, `MOCK=0`, and the type
 - "Academic Building" uses the West Wing outline only; the building has two wings and the schema holds one ring.
 - "The Yard" uses the outline OpenStreetMap names Sojourner Truth Apartments (40 College Ave).
 - The pulse must stay a feature state. Changing the layer's paint expression every frame reloads the building tiles and the colors disappear.
-- Not built: attendance beacons, the slider's play button.
 - The sidebar (voice above ingest) can run past the bottom of a short screen. It lives in frozen `client/src/app/`.
 
 ## Where things live
