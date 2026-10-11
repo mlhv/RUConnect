@@ -1,0 +1,26 @@
+.map-building {
+  position: absolute; top: 56px; left: 16px; width: min(300px, calc(100vw - 32px));
+  max-height: calc(100vh - 160px); overflow-y: auto; box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.07); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.map-building header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.map-building h2 { margin: 0; font-size: 15px; }
+.map-building header button {
+  flex: none; width: 24px; height: 24px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.08);
+  color: inherit; font: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+}
+.map-building header button:hover { background: rgba(255, 255, 255, 0.16); }
+.map-building h3 {
+  margin: 12px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #a8b3c7;
+}
+.map-building ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.map-building li { display: flex; gap: 8px; }
+.map-building li i { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; }
+.map-building li div { display: flex; flex-direction: column; gap: 1px; min-width: 0; font-size: 12px; color: #a8b3c7; }
+.map-building li strong { font-size: 13px; color: #e8ecf4; }
+.map-building li em { font-style: normal; color: #7bd389; }
+
+/* The sidebar spans a narrow screen, so the panel sits above the time slider there. */
+@media (max-width: 719px) {
+  .map-building { top: auto; bottom: 84px; max-height: 40vh; }
+}
