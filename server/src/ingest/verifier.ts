@@ -27,6 +27,7 @@ export function verify(draft: ReaderDraft, opts: { source: EventSource; now: str
 
   const now = Date.parse(opts.now);
   const start = Date.parse(draft.start);
+  if (Number.isNaN(start)) return { ok: false, reason: 'no date or time' };
   if (start < now - PLAUSIBLE_PAST_MS || start > now + PLAUSIBLE_FUTURE_MS) {
     notes.push('date looks implausible');
     confidence = Math.min(confidence, 0.5);

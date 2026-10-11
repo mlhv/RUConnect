@@ -60,6 +60,8 @@ export interface SwarmDeps {
   fetchImpl?: typeof fetch;
   /** Detail pages the Scout may open per site. */
   scoutPages?: number;
+  /** How long a read may take when the cache already has an answer, before the cache is used instead. */
+  cachedReadDeadlineMs?: number;
 }
 
 type Step = (worker: SwarmStep['worker'], state: SwarmStep['state'], text: string) => void;
@@ -73,6 +75,11 @@ interface PieceResult {
 }
 
 const MAX_RUNS_KEPT = 50;
+/**
+ * A cached flyer must not look hung on bad Wi-Fi: a full read can take minutes of timeouts and retries,
+ * so a piece the cache can answer gets this long before the cache replays.
+ */
+const CACHED_READ_DEADLINE_MS = 8000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -83,6 +90,18 @@ const shortPath = (url: string) => {
     return url;
   }
 };
+
+/** Rejects if `p` takes longer than `ms`. The losing call keeps running; its result is ignored. */
+function withDeadline<T>(p: Promise<T>, ms: number): Promise<T> {
+  p.catch(() => {});
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`no answer within ${Math.round(ms / 1000)} s`)), ms);
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
 
 function readerInput(p: HashedPiece): ReaderInput {
   const isImage = p.mime.startsWith('image/');
@@ -116,10 +135,15 @@ export class Swarm {
   start(items: SwarmItem[]): { runId: string; items: { itemId: string; name: string }[] } {
     const run: Run = { id: randomUUID(), messages: [], listeners: new Set(), done: false };
     this.runs.set(run.id, run);
-    if (this.runs.size > MAX_RUNS_KEPT) this.runs.delete(this.runs.keys().next().value!);
+    if (this.runs.size > MAX_RUNS_KEPT) {
+      // Drop the oldest finished run; a run still in progress keeps its stream.
+      const oldest = [...this.runs.values()].find((r) => r.done);
+      if (oldest) this.runs.delete(oldest.id);
+    }
 
     const withIds = items.map((item) => ({ item, itemId: randomUUID() }));
-    void this.process(run, withIds);
+    // Anything process() does not handle (e.g. the database is down) ends the run instead of crashing the server.
+    this.process(run, withIds).catch((err) => this.failRun(run, withIds, err));
     return { runId: run.id, items: withIds.map(({ item, itemId }) => ({ itemId, name: item.name })) };
   }
 
@@ -136,6 +160,18 @@ export class Swarm {
   private emit(run: Run, m: RunMessage): void {
     run.messages.push(m);
     for (const l of run.listeners) l(m);
+  }
+
+  /** Marks every item failed and closes the stream, so the panel shows the error instead of spinning. */
+  private failRun(run: Run, items: { itemId: string }[], err: unknown): void {
+    console.error(`ingest run ${run.id} failed:`, err);
+    if (run.done) return;
+    for (const { itemId } of items) {
+      this.emit(run, { type: 'step', step: { runId: run.id, itemId, worker: 'scout', state: 'failed', summary: `run failed: ${errorText(err)}` } });
+    }
+    this.emit(run, { type: 'done', summary: { items: items.length, eventsCreated: 0, sentToReview: 0, duplicates: 0, skipped: 0, failed: items.length } });
+    run.done = true;
+    run.listeners.clear();
   }
 
   private async process(run: Run, items: { item: SwarmItem; itemId: string }[]): Promise<void> {
@@ -189,7 +225,8 @@ export class Swarm {
       const cached = this.deps.cache.get(piece.hash);
       try {
         if (!this.gemini) throw new Error('no Gemini key configured');
-        const drafts = await readItem(readerInput(piece), { gemini: this.gemini, buildings, now });
+        const read = readItem(readerInput(piece), { gemini: this.gemini, buildings, now });
+        const drafts = cached ? await withDeadline(read, this.deps.cachedReadDeadlineMs ?? CACHED_READ_DEADLINE_MS) : await read;
         results.push({ piece, rawId, drafts });
         await this.markDone(piece.hash, rawId);
       } catch (err) {
@@ -244,7 +281,8 @@ export class Swarm {
     for (const { event, rawId } of events) {
       let dup = null;
       try {
-        dup = await findDuplicate(event, { store: this.deps.store, gemini: this.gemini });
+        // Same limit as a cached read: on a dead network, saving a possible duplicate beats hanging the demo.
+        dup = await withDeadline(findDuplicate(event, { store: this.deps.store, gemini: this.gemini }), this.deps.cachedReadDeadlineMs ?? CACHED_READ_DEADLINE_MS);
       } catch (err) {
         console.error('deduper failed, saving the event anyway:', err);
       }
