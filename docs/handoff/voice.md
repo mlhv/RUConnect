@@ -14,13 +14,37 @@ Feature freeze is 9:00 AM Sunday Oct 11. The demo needs one reliable question-to
 
 ## State right now
 
-- No voice code exists yet. The design and the task-by-task plan are written: `server/src/voice/docs/2026-10-10-voice-design.md` and `server/src/voice/docs/2026-10-10-voice-plan.md`. Follow the plan; where it differs from "Build order" below, the plan wins.
-- `/api/voice/*` answers 501 (`server/src/voice/router.ts`). `VoicePanel` is a placeholder (`client/src/voice/index.tsx`).
-- The session endpoint needs a `contract:` pull request first: the frozen `server/src/core/app.test.ts` asserts that `GET /api/voice/session` answers 501.
-- The ingest slice merged its flyer reader (pull request 4). Events it saves are searchable as soon as they are `published`. It does not write `events.embedding` and has no deduper, so one flyer uploaded twice is two events; the voice ranking collapses those.
-- The ElevenLabs agent has not been created in the dashboard. No `ELEVENLABS_API_KEY` or `ELEVENLABS_AGENT_ID` is in anyone's `.env` yet.
-- `@elevenlabs/react` is already installed in `client/`. No ElevenLabs server SDK is installed; the one server call needed is a plain `fetch`.
-- The app runs with `MOCK=1` on 12 sample events dated Oct 10 to 11, 2026. Set `DEMO_NOW` (for example `2026-10-10T19:30:00-04:00`) so "tonight" means something.
+Updated Oct 11, 2026. All ten tasks of the plan are done.
+
+What works:
+- `POST /api/voice/search`: body `{ query, from, to, category, freeFood: "prefer" | "require", nearBuildingId }`, all optional, returns `{ matches, later }`. Each hit is `{ event, distanceM, endsAfterWindow, matchesQuery }`. Ranking is the pure `rankEvents` in `server/src/voice/rank.ts`; weights are named constants at the top.
+- `GET /api/voice/session`: returns `{ signedUrl, now }`, or `503 voice_unavailable` without credentials, or `502 voice_upstream` when ElevenLabs refuses. The API key never leaves the server.
+- The panel (`client/src/voice/index.tsx`): Talk, Mute, End, a live transcript, typed input sent to the agent while connected, and text mode with a typed fallback when voice is unavailable.
+- The live agent, run by the owner against the demo script on Oct 11: it searches, moves the map, recommends only returned events, and finds an event read from an uploaded flyer.
+
+Where things live (`client/src/voice/` unless noted):
+- `agent/prompt.md`, `agent/tools.json`: the source of truth for the dashboard agent. `agent/toolContract.test.ts` ties `tools.json` to `toolSchemas.ts`.
+- `tools.ts`: `find_events` and `focus_event`. Neither can throw. `formatResults.ts`: the text the agent reads. `demoClock.ts`: the date correction below.
+- `fallback.ts`, `resolveBuilding.ts`: the typed path. `transcript.ts`: the transcript reducer; it strips the agent's `[excited]`-style delivery tags.
+- `searchApi.ts`, `sessionApi.ts`: the two HTTP calls. Server: `server/src/voice/{schema,rank,router,session}.ts`.
+
+Demo setup:
+- `.env`: `ELEVENLABS_API_KEY` (scope: ElevenAgents write), `ELEVENLABS_AGENT_ID`, `DEMO_NOW=2026-10-10T13:30:00-04:00`. `MOCK=1` is enough, including the flyer line. Restart `npm run dev` after editing `.env`; check with `curl -s localhost:3001/api/config`.
+- Script: (1) "I'm free until 4, I like robotics and free food, what's near the library?" gives the Robotics Club Build Session at the Student Center. (2) "Anything after 4?" gives the Robotics Team Demo and Scrimmage. (3) "What's cool on campus tonight?" gives a varied evening pick. (4) Upload `data/captures/test-flyers/1-clean-robotics.png`, then "Any robotics events later this week?" gives the Robotics Club Interest Meeting, Thursday 7 PM, Scott Hall.
+
+Dashboard lessons from the first setup:
+- Dashboard edits are a draft until **Publish** is pressed (orange dot on the button). An unpublished agent answers with no tools and no prompt.
+- Create the client tools from the agent's own Tools page so they are attached to it; "Wait for response" on; raise the response timeout from the 1 second default.
+- Changing the prompt means pasting all of `agent/prompt.md` and publishing. Changing a tool means changing `agent/tools.json`, `toolSchemas.ts`, and the dashboard together.
+- Rollback: once the script passes, duplicate the agent and leave the copy untouched. Rolling back is setting `ELEVENLABS_AGENT_ID` to the copy's id and restarting the server.
+
+Known behaviour and gaps:
+- With `DEMO_NOW` set, the agent's model writes dates from the real day, not the demo day. `demoClock.ts` moves those dates onto the demo day inside `find_events`. Side effect: a correctly dated "tomorrow" that lands on the real today is moved back a day.
+- The typed fallback does not understand times. When the top pick shares no interest word with the question it says "Nothing matches that exactly. The top pick coming up is …".
+- If the agent ends a call itself the panel returns to Talk with no message; only an error disconnect switches to text mode.
+- Not verified by an agent session: the map highlight and fly-to on screen (no Mapbox token on the machine that ran the checks), whether `openBuilding` opens a panel, whether `setTime` moves the slider, and the browser's read-aloud in text mode.
+- Semantic search is not built: `events.embedding` is still empty.
+- Deferred review notes are listed in the description of the pull request titled "voice: live tuning and handoff".
 
 ## What you own and what you may touch
 
@@ -44,36 +68,23 @@ Client:
 
 ## Build order
 
-Each step is usable without the next, so stop wherever time runs out.
-
-1. **Search endpoint.** `POST /api/voice/search` with body `{ query, from?, to?, freeFood?, nearBuildingId? }`, validated by a zod schema defined inside `server/src/voice/`. Returns `CampusEvent[]`, best first, at most 5. Put the ranking in a pure function in its own file with unit tests: filter by time window and `freeFood`, score by query words found in title, description, tags, and category, and boost events in or close to `nearBuildingId` (distance from building `lng`/`lat`). Only `published` events.
-2. **Text fallback UI.** In `VoicePanel`: a text box that posts to search, then calls `mapController.highlight` on the result buildings, `setTime` to the earliest result's start, `flyTo` and `openBuilding` on the top result, and reads a one-sentence answer with `speechSynthesis`. This is the spec's fallback and it proves the whole map reaction without ElevenLabs.
-3. **Tool functions.** Extract what step 2 does into two plain functions in `client/src/voice/`, unit tested with a mocked `fetch` and `mapController`:
-   - `findEvents({ query, from, to, freeFood, nearBuildingName })`: resolve `nearBuildingName` to a building id by matching `name` and `aliases` case-insensitively against `useEventsStore.getState().buildings`, call search, highlight and set the time, and return a compact string or list (title, building name, start and end time, free food) for the agent to speak from. Include each event's `id`.
-   - `focusEvent({ eventId })`: look the event up, then `flyTo` and `openBuilding` its building. Return a short confirmation.
-4. **Session endpoint.** `GET /api/voice/session` returns a short-lived credential for the browser. The API key stays on the server. Answer 503 with a clear error when the key or agent id is missing, so the client can fall back to step 2.
-5. **Agent in the dashboard** (a person does this, see below), then **the mic UI**: connect with `@elevenlabs/react`, register `find_events` and `focus_event` as client tools, show connection status and a live transcript, and fall back to the text box if the session request or connection fails.
-6. **Semantic search**, only if the ingest slice has filled `events.embedding` and time allows: embed the query with Gemini and order by vector distance through `deps.pool`, keeping the keyword path for mock mode.
+The build followed `server/src/voice/docs/2026-10-10-voice-plan.md` (design: `server/src/voice/docs/2026-10-10-voice-design.md`). Tasks 1 to 10 are done. What remains is outside that plan: semantic search (design section 9, step 6) and the showcase submission.
 
 ## ElevenLabs specifics
 
-These are from memory and were not checked against current documentation. Verify each against the ElevenLabs docs before relying on it.
+Checked against the ElevenLabs documentation and the installed `@elevenlabs/react` 1.17.0 types on Oct 10 to 11, 2026.
 
-- Signed URL for a private agent: `GET https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=<id>` with header `xi-api-key`, returning `{ "signed_url": "wss://..." }`.
-- Browser: the `useConversation` hook from `@elevenlabs/react`, with `startSession({ signedUrl })`, a `clientTools` object mapping tool names to async functions that return a string, and callbacks such as `onMessage`, `onConnect`, `onDisconnect`, `onError`. It also exposes `status` and `isSpeaking`. The installed version is `^1.17.0`; check its README in `node_modules/@elevenlabs/react` for the exact shape.
-- Microphone permission must be requested before starting a session, and it only works on `localhost` or HTTPS.
-- Client tools must also be declared on the agent in the dashboard, with the same names and parameter schemas, and set to wait for the tool's response so the agent can read the returned events.
-- The current time can be passed per session as a dynamic variable rather than hardcoded in the prompt.
+- Signed URL: `GET https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=<id>` with header `xi-api-key`, returning `{ "signed_url": "wss://..." }`.
+- Browser: `ConversationProvider` with `useConversationControls` (`startSession`, `endSession`, `sendUserMessage`), `useConversationStatus`, `useConversationMode`, `useConversationInput`. `startSession` takes `signedUrl`, `dynamicVariables`, `clientTools`, `onMessage`, `onError`, `onDisconnect`, and returns nothing.
+- Client tool handlers receive the parameters object; the string they return goes back to the agent. Tool and parameter names are case-sensitive.
+- Dynamic variables sent at session start: `current_time`, `current_iso`, `buildings`. The dashboard's own test call does not supply them and cannot run client tools; test through the app.
+- Microphone permission only works on `localhost` or HTTPS.
 
 ## Dashboard setup (needs a person with the ElevenLabs account)
 
-1. Create a Conversational AI agent. Copy its id into `.env` as `ELEVENLABS_AGENT_ID`, and an API key as `ELEVENLABS_API_KEY`. Share both with teammates outside git.
-2. Add two client tools:
-   - `find_events`: `query` (string, required), `from` and `to` (ISO 8601 datetime with offset, optional), `freeFood` (boolean, optional), `nearBuildingName` (string, optional).
-   - `focus_event`: `eventId` (string, required).
-3. System prompt, as a starting point:
-
-   > You are RUConnect, a friendly guide to events on the Rutgers College Avenue campus. The current time is {{current_time}} in America/New_York. Always call find_events before recommending anything; never invent events. Turn what the student says into a short search query, a time window, and a nearby building if they mention one. Recommend one or two events in a sentence or two each: what, where, when, and whether there is free food. Then call focus_event with the id of your top pick so the map flies there. If nothing matches, say so and suggest widening the time or interests. Buildings: Rutgers Student Center, Alexander Library, Scott Hall, Academic Building, College Avenue Gym, Voorhees Hall, Zimmerli Art Museum, The Yard, Murray Hall, Brower Commons, Honors College, Kirkpatrick Chapel.
+1. Create an agent. System prompt: the whole of `client/src/voice/agent/prompt.md`. First message: something short, such as "Hey, I'm RUConnect. What are you looking for?".
+2. On the agent's Tools page add two client tools exactly as in `client/src/voice/agent/tools.json`, with "Wait for response" on.
+3. Publish. Put the agent id and an API key in `.env` and share both with teammates outside git.
 
 ## Known gaps outside this slice
 
