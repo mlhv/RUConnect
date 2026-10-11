@@ -47,16 +47,23 @@ export interface FormatContext {
   buildings: Building[];
 }
 
+/** Flyer text is untrusted: collapse it to one line so it cannot forge list entries, and cap its length. */
+function clean(text: string, max?: number): string {
+  const flat = text.replace(/\s+/g, ' ').trim();
+  return max === undefined ? flat : flat.slice(0, max);
+}
+
 function describeHit(hit: Hit, ctx: FormatContext, inWindow: boolean): string {
   const e = hit.event;
   const bits = [
-    `[id ${e.id}] ${e.title}.`,
-    `${buildingName(e.buildingId, ctx.buildings)}${e.room ? `, room ${e.room}` : ''}, ${when(hit, ctx.now)}.`,
+    `[id ${e.id}] ${clean(e.title, 120)}.`,
+    `${buildingName(e.buildingId, ctx.buildings)}${e.room ? `, room ${clean(e.room)}` : ''}, ${when(hit, ctx.now)}.`,
   ];
   if (e.freeFood) bits.push('Free food.');
   if (hit.distanceM !== null && ctx.near) bits.push(`${hit.distanceM} m from ${ctx.near.name}.`);
   if (inWindow && hit.endsAfterWindow) bits.push('Runs past the window.');
-  if (e.description) bits.push(e.description.slice(0, 140));
+  const description = e.description ? clean(e.description, 140) : '';
+  if (description) bits.push(description);
   return bits.join(' ');
 }
 

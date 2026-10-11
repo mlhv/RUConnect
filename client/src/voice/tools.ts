@@ -29,7 +29,7 @@ export function createTools(deps: ToolDeps): Tools {
   let matches: Hit[] = [];
   let remembered: Hit[] = [];
 
-  async function findEvents(args: unknown): Promise<string> {
+  async function findEventsInner(args: unknown): Promise<string> {
     matches = [];
     const now = deps.now();
     const parsed = FindEventsArgsSchema.safeParse(args ?? {});
@@ -68,7 +68,7 @@ export function createTools(deps: ToolDeps): Tools {
     });
   }
 
-  async function focusEvent(args: unknown): Promise<string> {
+  async function focusEventInner(args: unknown): Promise<string> {
     const parsed = FocusEventArgsSchema.safeParse(args ?? {});
     const id = parsed.success ? parsed.data.eventId : null;
     const event = remembered.find((h) => h.event.id === id)?.event ?? deps.getEvents().find((e) => e.id === id);
@@ -78,6 +78,25 @@ export function createTools(deps: ToolDeps): Tools {
     deps.map.setTime(notBefore(event.start, deps.now()));
     const name = deps.getBuildings().find((b) => b.id === event.buildingId)?.name ?? event.buildingId;
     return `The map is now showing ${name}.`;
+  }
+
+  // The public tools never reject: any failure in a dependency becomes a sentence for the agent.
+  async function findEvents(args: unknown): Promise<string> {
+    try {
+      return await findEventsInner(args);
+    } catch {
+      matches = [];
+      remembered = [];
+      return 'The event search failed (unknown). Tell the student that search is unavailable right now.';
+    }
+  }
+
+  async function focusEvent(args: unknown): Promise<string> {
+    try {
+      return await focusEventInner(args);
+    } catch {
+      return 'The map could not be moved. Tell the student to try again.';
+    }
   }
 
   return { findEvents, focusEvent, lastMatches: () => matches };

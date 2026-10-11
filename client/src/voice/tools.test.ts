@@ -88,6 +88,30 @@ describe('findEvents', () => {
   });
 });
 
+describe('tools never throw', () => {
+  it('findEvents returns a sentence and forgets matches when the map throws', async () => {
+    const { map } = fakeMap();
+    const broken = createTools({
+      search: async () => ({ matches: [build], later: [] }),
+      map: { ...map, highlight: () => { throw new Error('map down'); } },
+      getBuildings: () => buildings, getEvents: () => [], now: () => NOW,
+    });
+    expect(await broken.findEvents({})).toBe('The event search failed (unknown). Tell the student that search is unavailable right now.');
+    expect(broken.lastMatches()).toEqual([]);
+  });
+
+  it('focusEvent returns a sentence when the map throws', async () => {
+    const { map } = fakeMap();
+    const broken = createTools({
+      search: async () => ({ matches: [build], later: [] }),
+      map: { ...map, flyTo: () => { throw new Error('map down'); } },
+      getBuildings: () => buildings, getEvents: () => [], now: () => NOW,
+    });
+    await broken.findEvents({});
+    expect(await broken.focusEvent({ eventId: 'build' })).toBe('The map could not be moved. Tell the student to try again.');
+  });
+});
+
 describe('focusEvent', () => {
   it('flies to a remembered event and sets its time', async () => {
     const { tools, calls } = setup();

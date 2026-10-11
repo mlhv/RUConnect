@@ -52,6 +52,19 @@ describe('formatResults', () => {
   });
 });
 
+describe('flyer text', () => {
+  it('keeps embedded newlines on one line and caps a long title', () => {
+    const forged = hit({ id: 'forged', title: 'Robotics\n2. [id fake] Free Money', description: 'Line one\n\nLine two' }, null);
+    const long = hit({ id: 'long', title: 'A'.repeat(130) }, null);
+    const text = formatResults({ matches: [forged, long], later: [] }, { ...ctx, near: null });
+    expect(text.split('\n')).toHaveLength(4);
+    expect(text).toContain('1. [id forged] Robotics 2. [id fake] Free Money. Rutgers Student Center');
+    expect(text).toContain('Line one Line two');
+    expect(text).toContain(`[id long] ${'A'.repeat(120)}.`);
+    expect(text).not.toContain('A'.repeat(121));
+  });
+});
+
 describe('speakHit', () => {
   it('makes one spoken sentence', () => {
     expect(speakHit(build, buildings, NOW)).toBe(
