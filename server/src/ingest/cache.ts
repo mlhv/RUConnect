@@ -7,13 +7,17 @@ import { REPO_ROOT } from '../core/config';
 
 export const CACHE_PATH = resolve(REPO_ROOT, 'data/extraction.cache.json');
 
-const CacheFileSchema = z.record(z.string(), EventInputSchema);
+// Older entries hold one event; newer ones a list, since a page can hold many.
+const CacheFileSchema = z.record(
+  z.string(),
+  z.union([z.array(EventInputSchema), EventInputSchema.transform((e) => [e])]),
+);
 
 export const contentHash = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
 
-/** data/extraction.cache.json: content hash to a known-good event, replayed in MOCK=1 or when Gemini fails. */
+/** data/extraction.cache.json: content hash of a piece to its known-good events, replayed in MOCK=1 or when Gemini fails. */
 export class ExtractionCache {
-  constructor(private readonly entries: Record<string, EventInput> = {}) {}
+  constructor(private readonly entries: Record<string, EventInput[]> = {}) {}
 
   static load(path = CACHE_PATH): ExtractionCache {
     try {
@@ -24,12 +28,12 @@ export class ExtractionCache {
     }
   }
 
-  get(hash: string): EventInput | null {
+  get(hash: string): EventInput[] | null {
     return this.entries[hash] ?? null;
   }
 
-  set(hash: string, event: EventInput): void {
-    this.entries[hash] = event;
+  set(hash: string, events: EventInput[]): void {
+    this.entries[hash] = events;
   }
 
   save(path = CACHE_PATH): void {

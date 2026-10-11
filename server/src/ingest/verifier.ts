@@ -9,17 +9,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const PLAUSIBLE_PAST_MS = DAY_MS;
 const PLAUSIBLE_FUTURE_MS = 90 * DAY_MS;
 
+/** `skipped` drafts are not College Ave events, or lack what the map needs. They are expected, not errors. */
 export type VerifyResult =
   | { ok: true; event: EventInput; notes: string[] }
   | { ok: false; reason: string };
 
-/** Turns a draft into a saveable event, or explains why it cannot be saved. */
+/** Turns a draft into a saveable event, or explains why it is skipped. */
 export function verify(draft: ReaderDraft, opts: { source: EventSource; now: string }): VerifyResult {
-  if (!draft.title) return { ok: false, reason: 'no title found' };
-  if (!draft.start) return { ok: false, reason: 'no date or time found' };
-  if (!draft.buildingId) {
-    return { ok: false, reason: `no College Ave building matches "${draft.locationText ?? 'unknown location'}"` };
-  }
+  if (!draft.title) return { ok: false, reason: 'no title' };
+  // Only College Ave is on the map for now. Widening this is the switch for other campuses.
+  if (draft.campus !== 'college_ave') return { ok: false, reason: `not College Ave (${draft.campus})` };
+  if (!draft.start) return { ok: false, reason: 'no date or time' };
+  if (!draft.buildingId) return { ok: false, reason: `no building matches "${draft.locationText ?? 'unknown location'}"` };
 
   const notes: string[] = [];
   let confidence = Math.min(draft.confidence.title, draft.confidence.time, draft.confidence.location);
