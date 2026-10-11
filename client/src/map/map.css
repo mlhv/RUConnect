@@ -20,9 +20,9 @@
 .map-building li strong { font-size: 13px; color: #e8ecf4; }
 .map-building li em { font-style: normal; color: #7bd389; }
 
-/* The sidebar spans a narrow screen, so the panel sits above the time slider there. */
+/* The sidebar spans a narrow screen, so the panel sits above the campus chips and the time slider there. */
 @media (max-width: 719px) {
-  .map-building { top: auto; bottom: 84px; max-height: 40vh; }
+  .map-building { top: auto; bottom: 128px; max-height: 40vh; }
 }
 
 .time-play {
@@ -30,3 +30,27 @@
   color: #fff; font: inherit; font-size: 11px; line-height: 1; cursor: pointer; transition: background 0.15s;
 }
 .time-play:hover { background: #4f7de8; }
+
+/* Campus chips sit just above the time slider. */
+.campus-switcher {
+  position: absolute; left: 16px; right: 16px; bottom: 84px; display: flex; justify-content: center; gap: 6px;
+  pointer-events: none;
+}
+.campus-switcher button {
+  pointer-events: auto; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(20, 27, 45, 0.9); color: #a8b3c7;
+  font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.campus-switcher button:hover { color: #e8ecf4; }
+.campus-switcher button[aria-pressed='true'] { background: #3d6bd6; border-color: transparent; color: #fff; }
+.campus-switcher span {
+  min-width: 18px; padding: 1px 0; border-radius: 999px; background: rgba(255, 255, 255, 0.08);
+  font-size: 11px; text-align: center; color: #7d8799;
+}
+.campus-switcher span.campus-live { background: rgba(123, 211, 137, 0.18); color: #7bd389; }
+.campus-switcher button[aria-pressed='true'] span { background: rgba(255, 255, 255, 0.22); color: #fff; }
+
+@media (max-width: 719px) {
+  .campus-switcher { gap: 4px; }
+  .campus-switcher button { padding: 6px 8px; font-size: 12px; }
+}
