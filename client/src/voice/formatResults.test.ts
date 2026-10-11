@@ -65,6 +65,15 @@ describe('flyer text', () => {
   });
 });
 
+describe('an event that is under way', () => {
+  it('is marked as already started, and one that has not begun is not', () => {
+    const running = hit({ id: 'running', start: '2026-10-10T13:00:00-04:00', end: '2026-10-10T14:30:00-04:00' });
+    const text = formatResults({ matches: [running, build], later: [] }, { ...ctx, near: null });
+    expect(text).toContain('1:00 PM to 2:30 PM. Already started.');
+    expect(text.match(/Already started\./g)).toHaveLength(1);
+  });
+});
+
 describe('the window in the header', () => {
   const sunday5 = '2026-10-11T17:00:00-04:00';
 

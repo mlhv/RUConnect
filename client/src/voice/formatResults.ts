@@ -79,6 +79,7 @@ function describeHit(hit: Hit, ctx: FormatContext, inWindow: boolean): string {
     `[id ${e.id}] ${clean(e.title, 120)}.`,
     `${buildingName(e.buildingId, ctx.buildings)}${e.room ? `, room ${clean(e.room)}` : ''}, ${when(hit, ctx.now)}.`,
   ];
+  if (Date.parse(e.start) <= Date.parse(ctx.now) && Date.parse(e.end) > Date.parse(ctx.now)) bits.push('Already started.');
   if (e.freeFood) bits.push('Free food.');
   if (hit.distanceM !== null && ctx.near) bits.push(`${hit.distanceM} m from ${ctx.near.name}.`);
   if (inWindow && hit.endsAfterWindow) bits.push('Runs past the window.');
