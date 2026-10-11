@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CategorySchema } from '@ruconnect/shared';
-import { CATEGORY_COLORS, buildingCategories } from './activity';
+import { CATEGORY_COLORS, beaconHeightM, buildingAttendance, buildingCategories } from './activity';
 import { at, makeEvent } from './testEvent';
 
 describe('buildingCategories', () => {
@@ -36,5 +36,31 @@ describe('CATEGORY_COLORS', () => {
     const colors = CategorySchema.options.map((c) => CATEGORY_COLORS[c]);
     expect(colors.every((c) => /^#[0-9a-f]{6}$/.test(c))).toBe(true);
     expect(new Set(colors).size).toBe(colors.length);
+  });
+});
+
+describe('buildingAttendance', () => {
+  it('adds up the expected attendance of each building\'s active published events', () => {
+    const events = [
+      makeEvent({ id: 'a', expectedAttendance: 40 }),
+      makeEvent({ id: 'b', expectedAttendance: 25 }),
+      makeEvent({ id: 'unknown', buildingId: 'b2', expectedAttendance: null }),
+      makeEvent({ id: 'later', buildingId: 'b3', expectedAttendance: 90, start: at(16), end: at(17) }),
+      makeEvent({ id: 'draft', buildingId: 'b4', expectedAttendance: 90, status: 'needs_review' }),
+    ];
+    expect(buildingAttendance(events, at(13, 30))).toEqual(new Map([['b1', 65], ['b2', 0]]));
+  });
+});
+
+describe('beaconHeightM', () => {
+  it('grows with attendance, quickly at first', () => {
+    expect(beaconHeightM(0)).toBe(10);
+    expect(beaconHeightM(25)).toBe(40);
+    expect(beaconHeightM(100)).toBe(70);
+    expect(beaconHeightM(25) - beaconHeightM(0)).toBeGreaterThan(beaconHeightM(125) - beaconHeightM(100));
+  });
+
+  it('stops at a ceiling for very large events', () => {
+    expect(beaconHeightM(5000)).toBe(100);
   });
 });

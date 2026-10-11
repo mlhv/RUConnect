@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { MapController } from '@ruconnect/shared';
 import { useEventsStore } from '../app/eventsStore';
 import { registerMapController } from '../app/mapController';
-import { CATEGORY_COLORS, buildingCategories } from './activity';
+import { CATEGORY_COLORS, beaconHeightM, buildingAttendance, buildingCategories } from './activity';
 import { BuildingPanel } from './BuildingPanel';
-import { buildingsToGeoJSON, cameraPadding } from './geo';
+import { type Beacon, beaconsToGeoJSON, buildingsToGeoJSON, cameraPadding } from './geo';
 import { eventsForBuilding } from './panel';
 import { TimeSlider } from './TimeSlider';
 import './map.css';
@@ -17,6 +17,12 @@ const LAYER = 'ru-buildings-3d';
 const GLOW_LAYER = 'ru-buildings-glow';
 const LABEL_LAYER = 'ru-buildings-labels';
 const CONTEXT_LAYER = 'ru-context-3d';
+const BEACON_SOURCE = 'ru-beacons';
+const BEACON_LAYER = 'ru-beacons-3d';
+/** The camera opens a little further out and settles here, so the first view is already moving. */
+const OPENING_ZOOM = 16;
+const OPENING_BEARING = -20;
+const OPENING_MS = 4500;
 const IS_EXTRUDED: mapboxgl.ExpressionSpecification = ['==', ['get', 'extrude'], 'true'];
 const CENTER: [number, number] = [-74.449, 40.5015];
 const BASE_COLOR = '#3a4a6b';
@@ -71,9 +77,9 @@ export function MapView() {
       container: container.current,
       style: 'mapbox://styles/mapbox/dark-v11',
       center: CENTER,
-      zoom: 15.5,
+      zoom: OPENING_ZOOM - 0.6,
       pitch: 60,
-      bearing: -30,
+      bearing: OPENING_BEARING - 15,
       antialias: true,
     });
     mapRef.current = map;
@@ -157,6 +163,19 @@ export function MapView() {
           'fill-extrusion-ambient-occlusion-radius': 4,
         },
       });
+      // A column on the roof of each active building, taller for a bigger expected crowd.
+      map.addSource(BEACON_SOURCE, { type: 'geojson', data: beaconsToGeoJSON([], new Map()) });
+      map.addLayer({
+        id: BEACON_LAYER,
+        type: 'fill-extrusion',
+        source: BEACON_SOURCE,
+        paint: {
+          'fill-extrusion-base': ['get', 'baseM'],
+          'fill-extrusion-height': ['get', 'topM'],
+          'fill-extrusion-color': ['to-color', ['get', 'color']],
+          'fill-extrusion-opacity': 0.55,
+        },
+      });
       // Names float over lit buildings only.
       map.addLayer({
         id: LABEL_LAYER,
@@ -178,6 +197,7 @@ export function MapView() {
         },
       });
       map.setPadding(cameraPadding(window.innerWidth));
+      map.easeTo({ zoom: OPENING_ZOOM, bearing: OPENING_BEARING, duration: OPENING_MS, easing: easeInOut });
       map.on('click', (e) => {
         const hit = map.queryRenderedFeatures(e.point, { layers: [LAYER] })[0];
         setOpenId(hit?.id == null ? null : String(hit.id));
@@ -214,6 +234,11 @@ export function MapView() {
     if (!ready || !map) return;
     const categories = buildingCategories(events, selectedTime);
     activeRef.current = [...categories.keys()];
+    const beacons = new Map<string, Beacon>();
+    for (const [id, attendance] of buildingAttendance(events, selectedTime)) {
+      beacons.set(id, { heightM: beaconHeightM(attendance), color: CATEGORY_COLORS[categories.get(id) ?? 'other'] });
+    }
+    (map.getSource(BEACON_SOURCE) as mapboxgl.GeoJSONSource).setData(beaconsToGeoJSON(buildings, beacons));
     for (const b of buildings) {
       const category = categories.get(b.id);
       map.setFeatureState(

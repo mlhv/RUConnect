@@ -18,3 +18,9 @@ export function timeAtIndex(iso: string, index: number): string {
   const clamped = Math.min(SLIDER_STEPS - 1, Math.max(0, index));
   return new Date(localMidnight(iso) + clamped * STEP_MS).toISOString();
 }
+
+/** The next 15-minute step of the same local day, or null at the last one. Drives the play button. */
+export function nextStep(iso: string): string | null {
+  const index = sliderIndex(iso);
+  return index >= SLIDER_STEPS - 1 ? null : timeAtIndex(iso, index + 1);
+}
