@@ -14,7 +14,10 @@ Feature freeze is 9:00 AM Sunday Oct 11. The demo needs one reliable question-to
 
 ## State right now
 
+- No voice code exists yet. The design and the task-by-task plan are written: `server/src/voice/docs/2026-10-10-voice-design.md` and `server/src/voice/docs/2026-10-10-voice-plan.md`. Follow the plan; where it differs from "Build order" below, the plan wins.
 - `/api/voice/*` answers 501 (`server/src/voice/router.ts`). `VoicePanel` is a placeholder (`client/src/voice/index.tsx`).
+- The session endpoint needs a `contract:` pull request first: the frozen `server/src/core/app.test.ts` asserts that `GET /api/voice/session` answers 501.
+- The ingest slice merged its flyer reader (pull request 4). Events it saves are searchable as soon as they are `published`. It does not write `events.embedding` and has no deduper, so one flyer uploaded twice is two events; the voice ranking collapses those.
 - The ElevenLabs agent has not been created in the dashboard. No `ELEVENLABS_API_KEY` or `ELEVENLABS_AGENT_ID` is in anyone's `.env` yet.
 - `@elevenlabs/react` is already installed in `client/`. No ElevenLabs server SDK is installed; the one server call needed is a plain `fetch`.
 - The app runs with `MOCK=1` on 12 sample events dated Oct 10 to 11, 2026. Set `DEMO_NOW` (for example `2026-10-10T19:30:00-04:00`) so "tonight" means something.
