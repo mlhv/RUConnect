@@ -1,1 +1,84 @@
-{}
+{
+  "5a4011ad5cd139a9064783f83c26644cb51eddb912b1eaac850545ff4c8f5b66": {
+    "title": "Open Mic Night",
+    "description": "Open Mic Night featuring music, poetry, and comedy. Sign up at the door; snacks provided.",
+    "category": "arts",
+    "buildingId": "student-center",
+    "room": "Multipurpose Room",
+    "start": "2026-10-16T20:00:00-04:00",
+    "end": "2026-10-17T01:00:00.000Z",
+    "expectedAttendance": 50,
+    "tags": [
+      "open mic",
+      "music",
+      "poetry",
+      "comedy",
+      "performance"
+    ],
+    "freeFood": true,
+    "source": "flyer",
+    "status": "published",
+    "confidence": 1
+  },
+  "d806c6ce47bdb977086e4fef90254f616c8a69e614382610ba61d93d3e075e00": {
+    "title": "Career Panel: Landing a Tech Internship",
+    "description": "Alumni from three NJ startups share how they got their first internship. Bring questions and your resume. All majors welcome.",
+    "category": "career",
+    "buildingId": "academic-building",
+    "room": "2400",
+    "start": "2026-10-19T17:30:00-04:00",
+    "end": "2026-10-19T19:00:00-04:00",
+    "expectedAttendance": 45,
+    "tags": [
+      "career",
+      "internship",
+      "panel",
+      "tech",
+      "alumni"
+    ],
+    "freeFood": false,
+    "source": "flyer",
+    "status": "published",
+    "confidence": 1
+  },
+  "a56bb605217814be3cf80f76c56f0f3d4c028c52187af31b86319083401b98f2": {
+    "title": "Late Night Study Jam",
+    "description": "Midterm review tables and peer tutors for CS, Calc, and Chem. Free coffee and snacks provided.",
+    "category": "academic",
+    "buildingId": "alexander-library",
+    "room": "2nd floor",
+    "start": "2026-10-14T21:00:00-04:00",
+    "end": "2026-10-15T00:00:00-04:00",
+    "expectedAttendance": 50,
+    "tags": [
+      "tutoring",
+      "study",
+      "midterms",
+      "stem"
+    ],
+    "freeFood": true,
+    "source": "flyer",
+    "status": "published",
+    "confidence": 1
+  },
+  "01d770a0f5dad3dc4c6b2ce2292f46c3e043ffedcae6488b97979be8aacfca3c": {
+    "title": "Robotics Club Interest Meeting",
+    "description": "Meet the team, see our competition bot, and learn how to join for spring season.",
+    "category": "club",
+    "buildingId": "scott-hall",
+    "room": "123",
+    "start": "2026-10-15T19:00:00-04:00",
+    "end": "2026-10-15T20:30:00-04:00",
+    "expectedAttendance": 40,
+    "tags": [
+      "robotics",
+      "club",
+      "pizza",
+      "meeting"
+    ],
+    "freeFood": true,
+    "source": "flyer",
+    "status": "published",
+    "confidence": 1
+  }
+}
