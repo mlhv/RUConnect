@@ -45,14 +45,14 @@ The photo may be crumpled, angled, dim, or partly covered. Extract the one main 
 Now is ${now}. Times are America/New_York. If the flyer gives a weekday or date without a year, pick the next matching date on or after today.
 
 Rules:
-- start and end: ISO 8601 with offset, e.g. 2026-10-10T19:00:00-04:00. If only a start time is shown, set end to start plus 1 hour and lower confidence.time. Null if no time is shown.
+- start and end: ISO 8601 with offset, e.g. 2026-10-10T19:00:00-04:00. Start is null if no time is shown. End is null if only a start time is shown; a missing end time alone does not lower confidence.time.
 - buildingId: one id from the list below, matching the name, alias, or street address. Null if none match; still copy what the flyer says into locationText.
 - room: room number or name if shown, else null.
 - freeFood: true only if the flyer mentions free food, snacks, pizza, refreshments, or similar.
 - expectedAttendance: a rough guess from the event's size, or null.
 - tags: 1 to 5 short lowercase keywords.
 - description: one or two sentences from the flyer's text. Do not invent details.
-- confidence: 0 to 1 per group. Below 0.8 means a person should check it (blurry text, guessed date, unclear venue).
+- confidence: 0 to 1 per group, for how sure you are of what you read. Below 0.8 means a person should check it (blurry text, guessed date, unclear venue).
 
 Buildings:
 ${list}${caption ? `\n\nText posted with the image:\n${caption}` : ''}`;
