@@ -7,6 +7,7 @@ const draft: ReaderDraft = {
   title: 'Robotics Club Info Session',
   description: 'Meet the team.',
   category: 'club',
+  campus: 'college_ave',
   buildingId: 'scott-hall',
   locationText: 'Scott Hall 123',
   room: '123',
@@ -37,6 +38,11 @@ describe('verify', () => {
   it('defaults a missing end to one hour after start', () => {
     const r = verify({ ...draft, end: null }, { source: 'flyer', now });
     expect(r.ok && Date.parse(r.event.end) - Date.parse(r.event.start)).toBe(60 * 60 * 1000);
+  });
+
+  it('skips events on other campuses or online', () => {
+    expect(verify({ ...draft, campus: 'busch' }, { source: 'board', now })).toEqual({ ok: false, reason: 'not College Ave (busch)' });
+    expect(verify({ ...draft, campus: 'online' }, { source: 'board', now })).toMatchObject({ ok: false });
   });
 
   it('rejects drafts that cannot be placed or timed', () => {

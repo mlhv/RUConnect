@@ -16,3 +16,5 @@
 .panel .ingest-error { color: #ff9aa8; margin-top: 4px; }
 .panel .ingest-review { color: #ffd166; margin-top: 4px; }
 .ingest-review button { padding: 2px 8px; font-size: 12px; }
+.ingest-actions { flex-wrap: wrap; }
+.panel .ingest-summary { margin-top: 2px; font-size: 12px; }

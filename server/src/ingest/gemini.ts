@@ -1,10 +1,26 @@
-import { ApiError, GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { ApiError, GoogleGenAI, ThinkingLevel, type Content, type GenerateContentResponse } from '@google/genai';
 import type { Config } from '../core/config';
 
-/** The model calls the swarm makes. Workers take this interface so tests can pass a stub. */
+export interface GeminiRequest {
+  prompt: string;
+  images?: { data: Buffer; mime: string }[];
+  jsonSchema: unknown;
+}
+
+/** A function the model may call during `runTools`. */
+export interface AgentTool {
+  name: string;
+  description: string;
+  parameters: unknown;
+  run(args: Record<string, unknown>): Promise<unknown>;
+}
+
+/** The model calls the agents make. Agents take this interface so tests can pass a stub. */
 export interface Gemini {
-  /** Sends one image plus a prompt and returns the model's raw JSON text. */
-  readImage(req: { prompt: string; image: Buffer; mime: string; jsonSchema: unknown }): Promise<string>;
+  /** Sends a prompt plus optional images and returns the model's raw JSON text. */
+  generateJson(req: GeminiRequest): Promise<string>;
+  /** Lets the model call tools until it stops or `maxSteps` model turns pass. Returns its final text. */
+  runTools(req: { prompt: string; tools: AgentTool[]; maxSteps: number }): Promise<string>;
 }
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
@@ -34,33 +50,59 @@ export async function withBackoff<T>(fn: () => Promise<T>, baseMs = 1000): Promi
   }
 }
 
-/** Null when no key or vision model is configured; the orchestrator then replays the cache. */
+/** Null when no key or vision model is configured; the swarm then replays the cache. */
 export function createGemini(config: Config): Gemini | null {
   if (!config.geminiApiKey || !config.geminiVisionModel) return null;
   const ai = new GoogleGenAI({ apiKey: config.geminiApiKey, httpOptions: { timeout: REQUEST_TIMEOUT_MS } });
   const model = config.geminiVisionModel;
+  // These tasks need little reasoning; low thinking keeps output tokens, and cost, down.
+  const thinkingConfig = { thinkingLevel: ThinkingLevel.LOW };
+
+  const logUsage = (res: GenerateContentResponse) => {
+    const u = res.usageMetadata;
+    if (u) console.log(`gemini ${model}: ${u.promptTokenCount ?? 0} in, ${(u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0)} out tokens`);
+  };
 
   return {
-    async readImage({ prompt, image, mime, jsonSchema }) {
+    async generateJson({ prompt, images = [], jsonSchema }) {
+      const parts = [
+        ...images.map((img) => ({ inlineData: { data: img.data.toString('base64'), mimeType: img.mime } })),
+        { text: prompt },
+      ];
       const res = await withBackoff(() =>
         ai.models.generateContent({
           model,
-          contents: [{ role: 'user', parts: [{ inlineData: { data: image.toString('base64'), mimeType: mime } }, { text: prompt }] }],
-          config: {
-            responseMimeType: 'application/json',
-            responseJsonSchema: jsonSchema,
-            // Reading a flyer needs little reasoning; low thinking keeps output tokens, and cost, down.
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-            maxOutputTokens: 4096,
-          },
+          contents: [{ role: 'user', parts }],
+          config: { responseMimeType: 'application/json', responseJsonSchema: jsonSchema, thinkingConfig, maxOutputTokens: 16384 },
         }),
       );
-      const u = res.usageMetadata;
-      if (u) {
-        console.log(`gemini ${model}: ${u.promptTokenCount ?? 0} in, ${(u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0)} out tokens`);
-      }
+      logUsage(res);
       if (!res.text) throw new Error('Gemini returned no text');
       return res.text;
+    },
+
+    async runTools({ prompt, tools, maxSteps }) {
+      const contents: Content[] = [{ role: 'user', parts: [{ text: prompt }] }];
+      const functionDeclarations = tools.map((t) => ({ name: t.name, description: t.description, parametersJsonSchema: t.parameters }));
+      for (let step = 0; step < maxSteps; step++) {
+        const res = await withBackoff(() =>
+          ai.models.generateContent({ model, contents, config: { tools: [{ functionDeclarations }], thinkingConfig, maxOutputTokens: 4096 } }),
+        );
+        logUsage(res);
+        const calls = res.functionCalls ?? [];
+        if (calls.length === 0) return res.text ?? '';
+        const reply = res.candidates?.[0]?.content;
+        if (reply) contents.push(reply);
+        const responses = await Promise.all(
+          calls.map(async (call) => {
+            const tool = tools.find((t) => t.name === call.name);
+            const result = tool ? await tool.run(call.args ?? {}).catch((err) => ({ error: String(err) })) : { error: `unknown tool ${call.name}` };
+            return { functionResponse: { id: call.id, name: call.name, response: { result } } };
+          }),
+        );
+        contents.push({ role: 'user', parts: responses });
+      }
+      return '';
     },
   };
 }

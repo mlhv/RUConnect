@@ -4,7 +4,8 @@ import type { AppDeps } from '../core/deps';
 import { HttpError } from '../core/http';
 import { ExtractionCache } from './cache';
 import { createGemini, type Gemini } from './gemini';
-import { Swarm, type RunMessage } from './swarm';
+import { SITES } from './sites';
+import { Swarm, type RunMessage, type SwarmItem } from './swarm';
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 const MAX_FILES = 10;
@@ -26,40 +27,66 @@ function parseUpload(req: Request, res: Response, next: NextFunction): void {
   });
 }
 
-/** Tests pass a stub Gemini and an in-memory cache; the server uses the real ones. */
+/** One swarm item per Rutgers events site. */
+export const siteItems = (urls: string[] = SITES): SwarmItem[] =>
+  urls.map((url) => ({ kind: 'site', name: new URL(url).hostname.replace(/^www\./, ''), url }));
+
+/** Tests pass stubs; the server uses the real ones. */
 export interface IngestOverrides {
   gemini?: Gemini | null;
   cache?: ExtractionCache;
   replayDelayMs?: number;
+  sites?: string[];
+  fetchImpl?: typeof fetch;
+  /** Minutes between automatic site scrapes. 0 or unset turns the schedule off. */
+  scrapeEveryMin?: number;
 }
 
 /** Mounted at /api/ingest by core/app.ts. */
 export function ingestRouter(deps: AppDeps, overrides: IngestOverrides = {}): Router {
   const { config } = deps;
+  const gemini = overrides.gemini !== undefined ? overrides.gemini : config.mock ? null : createGemini(config);
   const swarm = new Swarm({
     store: deps.store,
     pool: deps.pool,
     // MOCK=1 never calls Gemini: everything replays from the cache.
-    gemini: overrides.gemini !== undefined ? overrides.gemini : config.mock ? null : createGemini(config),
+    gemini,
     cache: overrides.cache ?? ExtractionCache.load(),
     concurrency: config.swarmConcurrency,
     now: () => config.demoNow ?? new Date().toISOString(),
     replayDelayMs: overrides.replayDelayMs ?? 400,
+    fetchImpl: overrides.fetchImpl,
   });
+  const sites = () => siteItems(overrides.sites);
+
+  // Off by default: `npm run dev` restarts on every save, and a scrape on each restart would spend credit for nothing.
+  const everyMin = overrides.scrapeEveryMin ?? Number(process.env.INGEST_SCRAPE_EVERY_MIN ?? 0);
+  if (everyMin > 0 && gemini) {
+    const scrape = () => console.log(`scheduled site scrape started: run ${swarm.start(sites()).runId}`);
+    setTimeout(scrape, 5000).unref();
+    setInterval(scrape, everyMin * 60 * 1000).unref();
+  }
 
   const r = Router();
 
   r.post('/runs', parseUpload, (req, res) => {
     const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-    if (files.length === 0) {
-      // A JSON body here means {capture: "instagram" | "board"}, which is not built yet.
-      throw new HttpError(501, 'not_implemented', [{ message: 'send images as multipart field "files"; captures are not built yet' }]);
+    if (files.length > 0) {
+      const caption = typeof req.body?.caption === 'string' ? req.body.caption : null;
+      const items: SwarmItem[] = files.map((f) => ({
+        kind: 'upload',
+        name: f.originalname,
+        piece: { sourceRef: f.originalname, mime: f.mimetype, bytes: f.buffer, text: caption },
+      }));
+      res.status(202).json(swarm.start(items));
+      return;
     }
-    const caption = typeof req.body?.caption === 'string' ? req.body.caption : null;
-    const started = swarm.start(
-      files.map((f) => ({ name: f.originalname, mime: f.mimetype, bytes: f.buffer, caption })),
-    );
-    res.status(202).json(started);
+    if (req.body?.capture === 'board') {
+      res.status(202).json(swarm.start(sites()));
+      return;
+    }
+    // {capture: "instagram"} is not built yet; an empty request has nothing to run.
+    throw new HttpError(501, 'not_implemented', [{ message: 'send {capture: "board"} or images as multipart field "files"' }]);
   });
 
   r.get('/runs/:id/stream', (req, res) => {
