@@ -1,13 +1,19 @@
 import { Router } from 'express';
 import type { AppDeps } from '../core/deps';
 import { HttpError, parse } from '../core/http';
-import { LATER_WINDOW_MS, rankEvents, resolveWindow } from './rank';
+import { createEmbedder } from './embed';
+import { LATER_WINDOW_MS, queryWords, rankEvents, resolveWindow } from './rank';
 import { SearchRequestSchema } from './schema';
+import { trySimilarities } from './semantic';
 import { createSession } from './session';
+
+/** The voice agent is waiting on the tool call; past this, answer from words alone. */
+const SEMANTIC_TIMEOUT_MS = 2000;
 
 /** Mounted at /api/voice by core/app.ts. */
 export function voiceRouter(deps: AppDeps): Router {
   const r = Router();
+  const embed = createEmbedder(deps.config);
 
   r.post('/search', async (req, res) => {
     const body = parse(SearchRequestSchema, req.body ?? {});
@@ -25,7 +31,12 @@ export function voiceRouter(deps: AppDeps): Router {
       to: new Date(to + LATER_WINDOW_MS + 1).toISOString(),
       status: 'published',
     });
-    res.json(rankEvents(events, buildings, body, now));
+    // Needs a database (pgvector does the comparison) and an embedding model; without either, or on failure, words rank alone.
+    const similarity =
+      deps.pool && embed && body.query && queryWords(body.query).length > 0
+        ? await trySimilarities(deps.pool, embed, body.query, events.map((e) => e.id), SEMANTIC_TIMEOUT_MS)
+        : null;
+    res.json(rankEvents(events, buildings, body, now, similarity ?? undefined));
   });
 
   r.get('/session', async (_req, res) => {

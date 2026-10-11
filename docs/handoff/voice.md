@@ -10,7 +10,7 @@ To start a new session, open Claude Code in this repo and say:
 
 A user presses a mic button and asks something like "I'm free until 4, I like robotics and free food, what's near the library?". An ElevenLabs Conversational AI agent searches our events, answers out loud, and the map flies to the building it recommends. Design: spec section 7 (`docs/superpowers/specs/2026-10-10-campus-events-design.md`).
 
-Feature freeze is 9:00 AM Sunday Oct 11. The demo needs one reliable question-to-fly-to exchange more than it needs breadth.
+Feature freeze is 11:30 AM Sunday Oct 11 (moved from 9:00 AM). The demo needs one reliable question-to-fly-to exchange more than it needs breadth.
 
 ## State right now
 
@@ -18,6 +18,7 @@ Updated Oct 11, 2026. All ten tasks of the plan are done.
 
 What works:
 - `POST /api/voice/search`: body `{ query, from, to, category, freeFood: "prefer" | "require", nearBuildingId }`, all optional, returns `{ matches, later }`. Each hit is `{ event, distanceM, endsAfterWindow, matchesQuery }`. Ranking is the pure `rankEvents` in `server/src/voice/rank.ts`; weights are named constants at the top.
+- Semantic search on the Tiger Data service, for the Tiger sponsor prize. With `MOCK=0`, `GEMINI_API_KEY`, and `GEMINI_EMBED_MODEL` set, `/search` embeds the query, pgvector compares it with `events.embedding` (`1 - (embedding <=> query)`), and the similarity joins the ranking as `WEIGHTS.semantic`. An event at or above `SEMANTIC_MATCH` counts as matching the query even with no shared word. Search embeds and stores any candidate event that has no embedding, so it does not wait on the ingest slice. The response shape is unchanged. The SQL and the embedding call are covered by fakes in the tests and were run by hand against the Tiger service on Oct 11.
 - `GET /api/voice/session`: returns `{ signedUrl, now }`, or `503 voice_unavailable` without credentials, or `502 voice_upstream` when ElevenLabs refuses. The API key never leaves the server.
 - The panel (`client/src/voice/index.tsx`): Talk, Mute, End, a live transcript, typed input sent to the agent while connected, and text mode with a typed fallback when voice is unavailable.
 - The live agent, run by the owner against the demo script on Oct 11: it searches, moves the map, recommends only returned events, and finds an event read from an uploaded flyer.
@@ -26,7 +27,7 @@ Where things live (`client/src/voice/` unless noted):
 - `agent/prompt.md`, `agent/tools.json`: the source of truth for the dashboard agent. `agent/toolContract.test.ts` ties `tools.json` to `toolSchemas.ts`.
 - `tools.ts`: `find_events` and `focus_event`. Neither can throw. `formatResults.ts`: the text the agent reads. `demoClock.ts`: the date correction below.
 - `fallback.ts`, `resolveBuilding.ts`: the typed path. `transcript.ts`: the transcript reducer; it strips the agent's `[excited]`-style delivery tags.
-- `searchApi.ts`, `sessionApi.ts`: the two HTTP calls. Server: `server/src/voice/{schema,rank,router,session}.ts`.
+- `searchApi.ts`, `sessionApi.ts`: the two HTTP calls. Server: `server/src/voice/{schema,rank,router,session}.ts`, plus `semantic.ts` (the SQL) and `embed.ts` (the Gemini embedding call).
 
 Demo setup:
 - `.env`: `ELEVENLABS_API_KEY` (scope: ElevenAgents write), `ELEVENLABS_AGENT_ID`, `DEMO_NOW=2026-10-10T13:30:00-04:00`. `MOCK=1` is enough, including the flyer line. Restart `npm run dev` after editing `.env`; check with `curl -s localhost:3001/api/config`.
@@ -43,7 +44,7 @@ Known behaviour and gaps:
 - The typed fallback does not understand times. When the top pick shares no interest word with the question it says "Nothing matches that exactly. The top pick coming up is …".
 - If the agent ends a call itself the panel returns to Talk with no message; only an error disconnect switches to text mode.
 - Not verified by an agent session: the map highlight and fly-to on screen (no Mapbox token on the machine that ran the checks), whether `openBuilding` opens a panel, whether `setTime` moves the slider, and the browser's read-aloud in text mode.
-- Semantic search is not built: `events.embedding` is still empty.
+- Semantic search: `SEMANTIC_FLOOR`, `SEMANTIC_FULL`, `SEMANTIC_MATCH`, and `WEIGHTS.semantic` in `rank.ts` were set on Oct 11 from `gemini-embedding-001` scores over the 16 seed events on the Tiger service; a different embedding model needs them measured again. A search takes about 0.4 seconds longer. The first search after a seed embeds every event in the window (about 1.8 seconds for 16) and may pass the 2 second limit; that search ranks on words and the next one is semantic. A query made only of filler words ("something cool") skips the embedding.
 - Deferred review notes are listed in the description of the pull request titled "voice: live tuning and handoff".
 
 ## What you own and what you may touch
@@ -68,7 +69,7 @@ Client:
 
 ## Build order
 
-The build followed `server/src/voice/docs/2026-10-10-voice-plan.md` (design: `server/src/voice/docs/2026-10-10-voice-design.md`). Tasks 1 to 10 are done. What remains is outside that plan: semantic search (design section 9, step 6) and the showcase submission.
+The build followed `server/src/voice/docs/2026-10-10-voice-plan.md` (design: `server/src/voice/docs/2026-10-10-voice-design.md`). Tasks 1 to 10 are done. Semantic search (design section 9, step 6) was built on Oct 11 outside that plan. What remains is the showcase submission.
 
 ## ElevenLabs specifics
 
