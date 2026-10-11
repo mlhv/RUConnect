@@ -19,8 +19,17 @@ export function timeAtIndex(iso: string, index: number): string {
   return new Date(localMidnight(iso) + clamped * STEP_MS).toISOString();
 }
 
-/** The next 15-minute step of the same local day, or null at the last one. Drives the play button. */
-export function nextStep(iso: string): string | null {
-  const index = sliderIndex(iso);
-  return index >= SLIDER_STEPS - 1 ? null : timeAtIndex(iso, index + 1);
+/** Where an instant sits on the slider, with a fraction when it falls between two steps. */
+export function sliderPosition(iso: string): number {
+  const position = (Date.parse(iso) - localMidnight(iso)) / STEP_MS;
+  return Math.min(SLIDER_STEPS - 1, Math.max(0, position));
+}
+
+/**
+ * The instant `stepMs` later, or null when that would pass the last slider step of the day.
+ * Drives the play button, which uses steps shorter than the slider's own so the clock glides.
+ */
+export function nextStep(iso: string, stepMs = STEP_MS): string | null {
+  const next = Date.parse(iso) + stepMs;
+  return next > localMidnight(iso) + (SLIDER_STEPS - 1) * STEP_MS ? null : new Date(next).toISOString();
 }
