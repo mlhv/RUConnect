@@ -1,7 +1,7 @@
 import { chunkText, htmlToText } from './html';
 
 /**
- * Public Rutgers event pages that allow crawlers (robots.txt does not block /events) and serve plain HTML.
+ * Public Rutgers event pages that allow crawlers (robots.txt does not block /events) and list events in plain HTML.
  * newbrunswick.rutgers.edu/events and masongross.rutgers.edu are behind a bot check, so they are left out on purpose.
  */
 export const SITES = [
@@ -10,9 +10,8 @@ export const SITES = [
   'https://www.rutgers.edu/events',
   'https://recreation.rutgers.edu/events',
   'https://careers.rutgers.edu/events',
-  'https://honorscollege.rutgers.edu/events',
-  'https://success.rutgers.edu/events',
-  'https://scarletfirst.rutgers.edu/events',
+  // honorscollege, success, and scarletfirst .rutgers.edu/events load their listings with JavaScript, so a plain
+  // fetch finds no events there (checked Oct 10). Add them back if they start serving listings as HTML.
 ];
 
 const USER_AGENT = 'RUConnect/0.1 (HackRU student project; campus events map)';
