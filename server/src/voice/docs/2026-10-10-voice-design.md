@@ -56,7 +56,7 @@ Code enforces facts (time window, publication status, distance). The model appli
 | `freeFood` | `"prefer"` or `"require"` | none |
 | `nearBuildingId` | string | none |
 
-"Now" is `deps.config.demoNow` when set, otherwise the real clock. A `to` that is not after `from`, or an unknown `nearBuildingId`, is a 400.
+"Now" is `deps.config.demoNow` when set, otherwise the real clock. A `from` earlier than now is treated as now. A `to` that is not after `from` is `400 invalid_window`, and an unknown `nearBuildingId` is `400 unknown_building`.
 
 Response:
 
@@ -72,7 +72,7 @@ Hit = { event: CampusEvent, distanceM: number | null, endsAfterWindow: boolean }
 An event is a candidate when all of these hold:
 
 - Its status is `published`.
-- Its overlap with `[from, to]` is at least 30 minutes, or its whole duration when shorter than 30 minutes.
+- Its overlap with `[from, to]` is at least 30 minutes, or its whole duration or the whole window when either is shorter than 30 minutes.
 - It has free food, when `freeFood` is `"require"`.
 
 `endsAfterWindow` is true when the event ends after `to`.
@@ -127,10 +127,10 @@ Arguments: `query`, `from`, `to`, `category`, `freeFood`, `nearBuildingName`. Al
 ```
 Now Sat 1:30 PM. Window: until 4:00 PM. Near: Alexander Library.
 2 matches, best first:
-1. [id voice-robotics-build] Robotics Club Build Session. Rutgers Student Center, 2:00 to 3:30 PM. Free food. 215 m from Alexander Library. <description>
+1. [id voice-robotics-build] Robotics Club Build Session. Rutgers Student Center, 2:00 PM to 3:30 PM. Free food. 217 m from Alexander Library. <description>
 2. ...
 Later, outside the window:
-- [id voice-robotics-demo] Robotics Team Demo and Scrimmage. College Avenue Gym, 4:00 to 5:30 PM. Free food.
+- [id voice-robotics-demo] Robotics Team Demo and Scrimmage. College Avenue Gym, 4:00 PM to 5:30 PM. Free food.
 ```
 
 A hit with `endsAfterWindow` carries "Runs past the window." With nothing in either list the text says so and suggests widening the time or interests.
@@ -197,11 +197,11 @@ Text box: connected, the text is sent to the agent as a user message. Otherwise 
 
 `fallback.ts`, a plain function over the same tools:
 
-1. Find a mentioned building and use its name as `nearBuildingName`. A building is mentioned when the sentence contains, as whole words, its full name, one of its aliases, or a word of its name that is at least four letters long, appears in no other building's name, and is not one of `rutgers`, `college`, `avenue`, `hall`, `center`. So "library" finds Alexander Library and "gym" finds the College Avenue Gym. With several mentions, the first in the sentence wins.
+1. Find a mentioned building and use its name as `nearBuildingName`. A building is mentioned when the sentence contains, as whole words, its full name, one of its aliases, or a word of its name that is at least three letters long, appears in no other building's name, and is not one of `rutgers`, `college`, `avenue`, `hall`, `center`, `student`, `building`, `art`. Aliases shorter than three letters are ignored. So "library" finds Alexander Library and "gym" finds the College Avenue Gym. With several mentions, the first in the sentence wins.
 2. If it contains "free food", set `freeFood: "prefer"`.
 3. Pass the sentence as `query`. The window is the default.
 4. Call `findEvents`, then `focusEvent` on the top match.
-5. Speak one sentence with `speechSynthesis`, for example "Robotics Club Build Session at the Rutgers Student Center, 2:00 to 3:30 PM, with free food." With no match, say so.
+5. Speak one sentence with `speechSynthesis`, for example "Robotics Club Build Session at Rutgers Student Center, 2:00 PM to 3:30 PM, with free food." With no match, say so.
 
 The fallback gets "now" from `GET /api/config`.
 
@@ -233,7 +233,7 @@ One branch and pull request per step. Each leaves the app working.
 1. Agent files (`prompt.md`, `tools.json`) and the seed events, so the dashboard can be set up in parallel.
 2. Search endpoint and ranking.
 3. Client tools, fallback, and the text panel.
-4. Session endpoint, tool contract test, mic, and transcript.
+4. Session endpoint, mic, and transcript. This needs a `contract:` pull request first: the frozen `server/src/core/app.test.ts` asserts that `GET /api/voice/session` answers 501. The tool contract test ships with step 3.
 5. Tuning with the real agent; update `docs/handoff/voice.md`; showcase submission.
 6. Semantic search, if `events.embedding` is filled and time allows: embed the query with Gemini, order by vector distance through `deps.pool`, and keep the keyword path for mock mode.
 
@@ -255,4 +255,5 @@ The panel component has no automated test, since no DOM environment is installed
 - Hall noise: mitigated by the mute button and typed input to the agent.
 - The map has not been confirmed rendering. `openBuilding` is a no-op until the map owner builds the panel. Whether `mapController.setTime` also moves the time slider is the map owner's implementation.
 - Building coordinates are approximate, so distances may change when the map owner corrects `data/buildings.json`; the seed scenario should be rechecked then.
+- Step 4 is blocked until all three owners agree to the `contract:` change above.
 - The owner supplies `ELEVENLABS_API_KEY` and `ELEVENLABS_AGENT_ID` in `.env`. Agents do not read `.env`.
