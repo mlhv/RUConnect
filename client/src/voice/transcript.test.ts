@@ -28,6 +28,7 @@ describe('transcriptReducer', () => {
     const s = add([], 'agent', '[excited] Tonight looks great! [happy] Or try the Art After Hours event.');
     expect(s[0].text).toBe('Tonight looks great! Or try the Art After Hours event.');
     expect(add([], 'agent', '[apologetic]')).toEqual([]);
+    expect(add([], 'agent', '[CANCELLED] Open Mic at 2:00 PM')[0].text).toBe('[CANCELLED] Open Mic at 2:00 PM');
     expect(add([], 'user', 'is [this] kept?')[0].text).toBe('is [this] kept?');
   });
 
