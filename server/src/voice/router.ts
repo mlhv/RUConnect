@@ -3,6 +3,7 @@ import type { AppDeps } from '../core/deps';
 import { HttpError, parse } from '../core/http';
 import { LATER_WINDOW_MS, rankEvents, resolveWindow } from './rank';
 import { SearchRequestSchema } from './schema';
+import { createSession } from './session';
 
 /** Mounted at /api/voice by core/app.ts. */
 export function voiceRouter(deps: AppDeps): Router {
@@ -27,9 +28,9 @@ export function voiceRouter(deps: AppDeps): Router {
     res.json(rankEvents(events, buildings, body, now));
   });
 
-  // The session route arrives with the contract change to core/app.test.ts.
-  r.use((_req, res) => {
-    res.status(501).json({ error: 'not_implemented', slice: 'voice' });
+  r.get('/session', async (_req, res) => {
+    res.json(await createSession(deps.config));
   });
+
   return r;
 }
