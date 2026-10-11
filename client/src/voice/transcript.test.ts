@@ -35,4 +35,10 @@ describe('transcriptReducer', () => {
   it('clears', () => {
     expect(transcriptReducer(add([], 'user', 'hi'), { type: 'clear' })).toEqual([]);
   });
+  it('keeps the cards of a results line, and adds no line without cards', () => {
+    const card = { id: 'a', title: 'T', place: 'P', when: 'W', freeFood: false, semantic: true };
+    const withCards = transcriptReducer([], { type: 'add', role: 'results', text: 'a', cards: [card] });
+    expect(withCards).toMatchObject([{ role: 'results', cards: [card] }]);
+    expect(transcriptReducer([], { type: 'add', role: 'results', text: 'a', cards: [] })).toEqual([]);
+  });
 });

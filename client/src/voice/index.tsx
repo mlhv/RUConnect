@@ -7,11 +7,22 @@ import { useEventsStore } from '../app/eventsStore';
 import { mapController } from '../app/mapController';
 import { runFallback } from './fallback';
 import { searchEvents } from './searchApi';
-import { meaningNote } from './meaningNote';
+import { resultCards } from './resultCards';
 import { fetchSession, sessionVariables } from './sessionApi';
 import { createTools } from './tools';
 import { transcriptReducer } from './transcript';
 import './voice.css';
+
+/** Shown before the first question; picking one asks it. */
+const IDEAS = ['Robotics and free food near the library', 'I like tinkering with machines', "What's on tonight?"];
+
+const ORB_LABEL = {
+  idle: 'Tap to talk',
+  connecting: 'Connecting…',
+  listening: 'Listening…',
+  speaking: 'Speaking…',
+  muted: 'Muted',
+};
 
 function speak(text: string): void {
   if (!('speechSynthesis' in window)) return;
@@ -65,10 +76,10 @@ function Panel() {
     [],
   );
 
-  /** Shows which results of the last search the database found by meaning rather than by a shared word. */
-  function showMeaning() {
-    const note = meaningNote(tools.lastMatches());
-    if (note) dispatch({ type: 'add', role: 'meaning', text: note });
+  /** Draws the best results of the last search as cards, marking those the database found by meaning alone. */
+  function showResults() {
+    const cards = resultCards(tools.lastMatches(), useEventsStore.getState().buildings, now());
+    dispatch({ type: 'add', role: 'results', text: cards.map((c) => c.id).join(','), cards });
   }
 
   const connected = status === 'connected';
@@ -102,7 +113,7 @@ function Panel() {
         find_events: async (args: unknown) => {
           dispatch({ type: 'add', role: 'tool', text: 'Searching events…' });
           const result = await tools.findEvents(args);
-          showMeaning();
+          showResults();
           return result;
         },
         focus_event: async (args: unknown) => {
@@ -125,9 +136,13 @@ function Panel() {
     setStarting(false);
   }
 
-  async function submit(e: FormEvent) {
+  function submit(e: FormEvent) {
     e.preventDefault();
-    const sentence = text.trim();
+    void ask(text);
+  }
+
+  async function ask(question: string) {
+    const sentence = question.trim();
     if (!sentence || busy) return;
     setText('');
     dispatch({ type: 'add', role: 'user', text: sentence });
@@ -145,7 +160,7 @@ function Panel() {
       const said = await runFallback(sentence, {
         tools, getBuildings: () => useEventsStore.getState().buildings, now, speak,
       });
-      showMeaning();
+      showResults();
       dispatch({ type: 'add', role: 'agent', text: said });
     } catch {
       dispatch({ type: 'add', role: 'agent', text: 'Something went wrong. Try again.' });
@@ -154,38 +169,78 @@ function Panel() {
     }
   }
 
-  const statusText = connected
-    ? isMuted ? 'Muted' : isSpeaking ? 'Speaking…' : 'Listening…'
-    : connecting ? 'Connecting…' : textMode;
+  const state = connected ? (isMuted ? 'muted' : isSpeaking ? 'speaking' : 'listening') : connecting ? 'connecting' : 'idle';
+  const hint = connected
+    ? isMuted ? 'Tap the mic to unmute' : 'Tap the mic to mute'
+    : 'or type a question below';
 
   return (
-    <section className="panel">
-      <h2>Ask</h2>
-      {statusText && <p className={`voice-status${!connected && textMode ? ' warn' : ''}`}>{statusText}</p>}
-      {lines.length > 0 && (
+    <section className="panel voice" data-state={state}>
+      <header className="voice-head">
+        <h2>Ask</h2>
+        {connected && <span className="voice-live"><i aria-hidden="true" />Live</span>}
+      </header>
+      {!connected && !connecting && textMode && <p className="voice-status warn">{textMode}</p>}
+      {lines.length > 0 ? (
         <ul className="voice-transcript" ref={transcriptRef}>
-          {lines.map((l) => <li key={l.id} className={l.role}>{l.text}</li>)}
+          {lines.map((l) =>
+            l.role === 'results' ? (
+              <li key={l.id} className="results">
+                {l.cards?.map((c, i) => (
+                  <button
+                    key={c.id} type="button" className="voice-card" title="Show on the map"
+                    onClick={() => void tools.focusEvent({ eventId: c.id })}
+                  >
+                    <span className="voice-card-rank">{i + 1}</span>
+                    <span className="voice-card-body">
+                      <strong>{c.title}</strong>
+                      <span>{c.when} · {c.place}</span>
+                      {(c.semantic || c.freeFood) && (
+                        <span className="voice-badges">
+                          {c.semantic && <em className="meaning">Matched by meaning</em>}
+                          {c.freeFood && <em className="food">Free food</em>}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                ))}
+              </li>
+            ) : (
+              <li key={l.id} className={l.role}>{l.text}</li>
+            ),
+          )}
         </ul>
+      ) : (
+        <div className="voice-ideas">
+          <span>Try asking</span>
+          {IDEAS.map((idea) => (
+            <button key={idea} type="button" onClick={() => void ask(idea)} disabled={busy}>{idea}</button>
+          ))}
+        </div>
       )}
-      <div className="voice-row">
-        {connected ? (
-          <>
-            <button type="button" className={isMuted ? 'active' : 'secondary'} onClick={() => setMuted(!isMuted)}>
-              {isMuted ? 'Unmute' : 'Mute'}
-            </button>
-            <button type="button" className="secondary" onClick={() => endSession()}>End</button>
-          </>
-        ) : (
-          <button type="button" onClick={start} disabled={connecting}>
-            {connecting ? 'Connecting…' : 'Talk'}
-          </button>
-        )}
+      <div className="voice-stage">
+        <button
+          type="button" className="voice-orb" disabled={connecting}
+          onClick={connected ? () => setMuted(!isMuted) : start}
+          aria-label={connected ? (isMuted ? 'Unmute' : 'Mute') : 'Talk'}
+        >
+          <span className="voice-bars" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+          <svg className="voice-mic" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 0 0-7 0v5A3.5 3.5 0 0 0 12 15Z" />
+            <path d="M6 11.5a6 6 0 0 0 12 0M12 17.5V21M9 21h6" />
+          </svg>
+        </button>
+        <div className="voice-stage-text">
+          <strong>{ORB_LABEL[state]}</strong>
+          <span>{hint}</span>
+        </div>
+        {connected && <button type="button" className="voice-end" onClick={() => endSession()}>End</button>}
       </div>
       <form className="voice-row" onSubmit={submit}>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Robotics and free food near the library"
+          placeholder="Ask about events"
           aria-label="Ask about events"
         />
         <button type="submit" disabled={busy || !text.trim()}>Ask</button>
