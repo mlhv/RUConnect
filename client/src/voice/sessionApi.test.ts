@@ -27,6 +27,7 @@ describe('sessionVariables', () => {
   it('gives the agent the Eastern clock and the building names', () => {
     expect(sessionVariables(NOW, buildings)).toEqual({
       current_time: 'Saturday, October 10, 2026, 1:30 PM, UTC offset -04:00',
+      current_iso: '2026-10-10T13:30:00-04:00',
       buildings: 'Rutgers Student Center, Alexander Library, Scott Hall, Voorhees Hall, College Avenue Gym',
     });
   });

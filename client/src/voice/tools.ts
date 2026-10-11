@@ -1,4 +1,5 @@
 import type { Building, CampusEvent, MapController } from '@ruconnect/shared';
+import { rebaseToAppDate } from './demoClock';
 import { formatResults, formatTime } from './formatResults';
 import { resolveBuilding } from './resolveBuilding';
 import { SearchError, type Hit, type SearchRequest, type SearchResponse } from './searchApi';
@@ -11,6 +12,8 @@ export interface ToolDeps {
   getEvents(): CampusEvent[];
   /** The instant the app treats as now, as an ISO string. */
   now(): string;
+  /** The real clock. Differs from `now` by days when DEMO_NOW is set. Defaults to the system clock. */
+  realNow?(): string;
 }
 
 export interface Tools {
@@ -45,7 +48,12 @@ export function createTools(deps: ToolDeps): Tools {
     const buildings = deps.getBuildings();
     const near = nearBuildingName ? resolveBuilding(nearBuildingName, buildings) : null;
 
-    const request: SearchRequest = { ...rest };
+    const realNow = deps.realNow?.() ?? new Date().toISOString();
+    const from = rest.from && rebaseToAppDate(rest.from, now, realNow);
+    const to = rest.to && rebaseToAppDate(rest.to, now, realNow);
+    const rebased = from !== rest.from || to !== rest.to;
+
+    const request: SearchRequest = { ...rest, from, to };
     if (near) request.nearBuildingId = near.id;
     let res: SearchResponse;
     try {
@@ -74,7 +82,7 @@ export function createTools(deps: ToolDeps): Tools {
       // A map failure must not hide the results: the agent still gets the list.
     }
     return formatResults(res, {
-      now, to: parsed.data.to, near, unresolvedNear: nearBuildingName && !near ? nearBuildingName : null, buildings,
+      now, from, to, rebased, near, unresolvedNear: nearBuildingName && !near ? nearBuildingName : null, buildings,
     });
   }
 

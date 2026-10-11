@@ -16,7 +16,7 @@ function setup(response: SearchResponse | Error = { matches: [build, study], lat
     return response;
   });
   const tools = createTools({
-    search, map, getBuildings: () => buildings, getEvents: () => [makeEvent({ id: 'stored', buildingId: 'scott-hall' })], now: () => NOW,
+    search, map, getBuildings: () => buildings, getEvents: () => [makeEvent({ id: 'stored', buildingId: 'scott-hall' })], now: () => NOW, realNow: () => NOW,
   });
   return { tools, search, calls };
 }
@@ -84,7 +84,7 @@ describe('findEvents', () => {
     const search = vi.fn<(req: SearchRequest) => Promise<SearchResponse>>()
       .mockResolvedValueOnce({ matches: [build, study], later: [] })
       .mockRejectedValueOnce(new Error('boom'));
-    const tools = createTools({ search, map, getBuildings: () => buildings, getEvents: () => [], now: () => NOW });
+    const tools = createTools({ search, map, getBuildings: () => buildings, getEvents: () => [], now: () => NOW, realNow: () => NOW });
     await tools.findEvents({});
     expect(tools.lastMatches()).toHaveLength(2);
     expect(await tools.findEvents({})).toContain('search failed');
@@ -111,7 +111,7 @@ describe('tools never throw', () => {
     const broken = createTools({
       search: async () => ({ matches: [build, study], later: [] }),
       map: { ...map, highlight: () => { throw new Error('map down'); } },
-      getBuildings: () => buildings, getEvents: () => [], now: () => NOW,
+      getBuildings: () => buildings, getEvents: () => [], now: () => NOW, realNow: () => NOW,
     });
     expect(await broken.findEvents({})).toContain('[id build]');
     expect(broken.lastMatches().map((h) => h.event.id)).toEqual(['build', 'study']);
@@ -123,7 +123,7 @@ describe('tools never throw', () => {
     const broken = createTools({
       search: async () => ({ matches: [build], later: [] }),
       map,
-      getBuildings: () => { throw new Error('store down'); }, getEvents: () => [], now: () => NOW,
+      getBuildings: () => { throw new Error('store down'); }, getEvents: () => [], now: () => NOW, realNow: () => NOW,
     });
     expect(await broken.findEvents({})).toBe('The event search failed (unknown). Tell the student that search is unavailable right now.');
     expect(broken.lastMatches()).toEqual([]);
@@ -135,10 +135,28 @@ describe('tools never throw', () => {
     const broken = createTools({
       search: async () => ({ matches: [build], later: [] }),
       map: { ...map, flyTo: () => { throw new Error('map down'); } },
-      getBuildings: () => buildings, getEvents: () => [], now: () => NOW,
+      getBuildings: () => buildings, getEvents: () => [], now: () => NOW, realNow: () => NOW,
     });
     await broken.findEvents({});
     expect(await broken.focusEvent({ eventId: 'build' })).toBe('The map could not be moved. Tell the student to try again.');
+  });
+});
+
+describe('findEvents with a demo clock', () => {
+  it('moves dates the agent wrote from the real day onto the app day, and says so', async () => {
+    const { map } = fakeMap();
+    const search = vi.fn(async (_req: SearchRequest) => ({ matches: [build], later: [] }));
+    const tools = createTools({
+      search, map, getBuildings: () => buildings, getEvents: () => [], now: () => NOW, realNow: () => '2026-10-11T01:50:00-04:00',
+    });
+    const text = await tools.findEvents({ from: '2026-10-11T17:00:00-04:00' });
+    expect(search.mock.calls[0][0].from).toBe('2026-10-10T21:00:00.000Z');
+    expect(text).toContain('Now Sat 1:30 PM. Window: from 5:00 PM.');
+    expect(text).toContain('Today is Saturday, October 10. The dates you sent were for a different day');
+
+    const kept = await tools.findEvents({ to: '2026-10-10T16:00:00-04:00' });
+    expect(search.mock.calls[1][0].to).toBe('2026-10-10T16:00:00-04:00');
+    expect(kept).not.toContain('The dates you sent');
   });
 });
 

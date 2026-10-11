@@ -24,6 +24,13 @@ describe('transcriptReducer', () => {
     expect(s[49].id).toBe(60);
   });
 
+  it("removes the agent's delivery tags and leaves other roles alone", () => {
+    const s = add([], 'agent', '[excited] Tonight looks great! [happy] Or try the Art After Hours event.');
+    expect(s[0].text).toBe('Tonight looks great! Or try the Art After Hours event.');
+    expect(add([], 'agent', '[apologetic]')).toEqual([]);
+    expect(add([], 'user', 'is [this] kept?')[0].text).toBe('is [this] kept?');
+  });
+
   it('clears', () => {
     expect(transcriptReducer(add([], 'user', 'hi'), { type: 'clear' })).toEqual([]);
   });

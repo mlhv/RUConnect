@@ -8,10 +8,13 @@ export type TranscriptAction = { type: 'add'; role: Line['role']; text: string }
 
 const MAX_LINES = 50;
 
-/** The conversation as shown in the panel. Drops blanks and an immediate repeat (an echoed typed message). */
+/** Expressive voice models write delivery cues such as "[excited]" into the agent's text. */
+const DELIVERY_TAG = /\[[a-z][a-z ]{0,30}\]\s*/gi;
+
+/** The conversation as shown in the panel. Drops blanks, an immediate repeat (an echoed typed message), and the agent's delivery tags. */
 export function transcriptReducer(state: Line[], action: TranscriptAction): Line[] {
   if (action.type === 'clear') return [];
-  const text = action.text.trim();
+  const text = (action.role === 'agent' ? action.text.replace(DELIVERY_TAG, '') : action.text).trim();
   if (!text) return state;
   const last = state[state.length - 1];
   if (last && last.role === action.role && last.text === text) return state;
