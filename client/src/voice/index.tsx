@@ -7,6 +7,7 @@ import { useEventsStore } from '../app/eventsStore';
 import { mapController } from '../app/mapController';
 import { runFallback } from './fallback';
 import { searchEvents } from './searchApi';
+import { meaningNote } from './meaningNote';
 import { fetchSession, sessionVariables } from './sessionApi';
 import { createTools } from './tools';
 import { transcriptReducer } from './transcript';
@@ -64,6 +65,12 @@ function Panel() {
     [],
   );
 
+  /** Shows which results of the last search the database found by meaning rather than by a shared word. */
+  function showMeaning() {
+    const note = meaningNote(tools.lastMatches());
+    if (note) dispatch({ type: 'add', role: 'meaning', text: note });
+  }
+
   const connected = status === 'connected';
   const connecting = starting || status === 'connecting';
 
@@ -94,7 +101,9 @@ function Panel() {
       clientTools: {
         find_events: async (args: unknown) => {
           dispatch({ type: 'add', role: 'tool', text: 'Searching events…' });
-          return tools.findEvents(args);
+          const result = await tools.findEvents(args);
+          showMeaning();
+          return result;
         },
         focus_event: async (args: unknown) => {
           dispatch({ type: 'add', role: 'tool', text: 'Moving the map…' });
@@ -136,6 +145,7 @@ function Panel() {
       const said = await runFallback(sentence, {
         tools, getBuildings: () => useEventsStore.getState().buildings, now, speak,
       });
+      showMeaning();
       dispatch({ type: 'add', role: 'agent', text: said });
     } catch {
       dispatch({ type: 'add', role: 'agent', text: 'Something went wrong. Try again.' });

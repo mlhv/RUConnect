@@ -147,11 +147,13 @@ export function rankEvents(
         const distance = anchor && building ? distanceM(anchor, building) : null;
         const endsAfterWindow = Date.parse(event.end) > to;
         const sim = q.length > 0 ? similarity.get(event.id) ?? 0 : 0;
+        const byWord = interests.length === 0 || mentions(event, interests);
         const hit: Hit = {
           event,
           distanceM: distance === null ? null : Math.round(distance),
           endsAfterWindow,
-          matchesQuery: interests.length === 0 || mentions(event, interests) || sim >= SEMANTIC_MATCH,
+          matchesQuery: byWord || sim >= SEMANTIC_MATCH,
+          semantic: !byWord && sim >= SEMANTIC_MATCH,
         };
         return { hit, score: score(event, distance, endsAfterWindow, q, req, sim) };
       })

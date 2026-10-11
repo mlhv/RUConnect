@@ -7,6 +7,8 @@ export const HitSchema = z.object({
   distanceM: z.number().nullable(),
   endsAfterWindow: z.boolean(),
   matchesQuery: z.boolean().default(true),
+  /** Found by vector similarity alone, with no query word in its text. */
+  semantic: z.boolean().default(false),
 });
 export type Hit = z.infer<typeof HitSchema>;
 

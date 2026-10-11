@@ -194,6 +194,15 @@ describe('rankEvents', () => {
     expect(ids(res.matches)).toEqual(['big', 'small']);
   });
 
+  it('marks a hit as found by meaning only when no word of the query appears in it', () => {
+    const sims = new Map([['study', 0.74], ['build', 0.7], ['drones', 0.52]]);
+    const by = (req: Parameters<typeof rankEvents>[2], similarity?: Map<string, number>) =>
+      Object.fromEntries(rankEvents(events, buildings, req, NOW, similarity).matches.map((h) => [h.event.id, h.semantic]));
+    expect(by({ query: 'robotics unwind' }, sims)).toMatchObject({ study: true, build: false, drones: false });
+    expect(Object.values(by({ query: 'robotics' })).every((s) => s === false)).toBe(true);
+    expect(Object.values(by({}, sims)).every((s) => s === false)).toBe(true);
+  });
+
   it('keeps a word match ahead of a weak similarity', () => {
     const res = rankEvents(events, buildings, { query: 'robotics' }, NOW, new Map([['study', 0.56], ['build', 0.6]]));
     expect(ids(res.matches).indexOf('build')).toBeLessThan(ids(res.matches).indexOf('study'));
