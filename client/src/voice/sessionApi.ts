@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { IsoDateTime, type Building } from '@ruconnect/shared';
-import { formatClock } from './formatResults';
+import { formatClock, formatIso } from './formatResults';
 
 const SessionSchema = z.object({ signedUrl: z.string().min(1), now: IsoDateTime });
 export type Session = z.infer<typeof SessionSchema>;
@@ -23,7 +23,9 @@ export async function fetchSession(fetchImpl: typeof fetch = (input, init) => fe
   return parsed.data;
 }
 
-/** Fills {{current_time}} and {{buildings}} in the dashboard prompt. */
-export function sessionVariables(now: string, buildings: Building[]): { current_time: string; buildings: string } {
-  return { current_time: formatClock(now), buildings: buildings.map((b) => b.name).join(', ') };
+/** Fills {{current_time}}, {{current_iso}}, and {{buildings}} in the dashboard prompt. */
+export function sessionVariables(
+  now: string, buildings: Building[],
+): { current_time: string; current_iso: string; buildings: string } {
+  return { current_time: formatClock(now), current_iso: formatIso(now), buildings: buildings.map((b) => b.name).join(', ') };
 }

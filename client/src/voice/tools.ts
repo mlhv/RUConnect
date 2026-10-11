@@ -74,7 +74,7 @@ export function createTools(deps: ToolDeps): Tools {
       // A map failure must not hide the results: the agent still gets the list.
     }
     return formatResults(res, {
-      now, to: parsed.data.to, near, unresolvedNear: nearBuildingName && !near ? nearBuildingName : null, buildings,
+      now, from: parsed.data.from, to: parsed.data.to, near, unresolvedNear: nearBuildingName && !near ? nearBuildingName : null, buildings,
     });
   }
 
