@@ -10,9 +10,9 @@ function setup(response: SearchResponse | Error) {
     if (response instanceof Error) throw response;
     return response;
   });
-  const tools = createTools({ search, map, getBuildings: () => buildings, getEvents: () => [], now: () => NOW });
+  const tools = createTools({ search, map, getBuildings: () => buildings, getEvents: () => [], now: () => NOW, realNow: () => NOW });
   const spoken: string[] = [];
-  const deps = { tools, getBuildings: () => buildings, now: () => NOW, speak: (t: string) => void spoken.push(t) };
+  const deps = { tools, getBuildings: () => buildings, now: () => NOW, realNow: () => NOW, speak: (t: string) => void spoken.push(t) };
   return { deps, search, calls, spoken };
 }
 

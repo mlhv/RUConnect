@@ -59,6 +59,8 @@ export interface FormatContext {
   now: string;
   from?: string;
   to?: string;
+  /** The agent's dates were on the wrong day and were moved onto the app's date. */
+  rebased?: boolean;
   near: Building | null;
   /** What the agent asked for when it matched no building. */
   unresolvedNear: string | null;
@@ -99,6 +101,9 @@ export function formatResults(res: SearchResponse, ctx: FormatContext): string {
   }
 
   const lines = [header];
+  if (ctx.rebased) {
+    lines.push(`Today is ${longDate(ctx.now)}. The dates you sent were for a different day, so they were read relative to today.`);
+  }
   if (res.matches.length) {
     lines.push(`${res.matches.length} ${res.matches.length === 1 ? 'match' : 'matches'}, best first:`);
     res.matches.forEach((h, i) => lines.push(`${i + 1}. ${describeHit(h, ctx, true)}`));
