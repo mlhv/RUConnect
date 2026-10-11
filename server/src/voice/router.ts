@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { AppDeps } from '../core/deps';
 import { HttpError, parse } from '../core/http';
 import { createEmbedder } from './embed';
-import { LATER_WINDOW_MS, rankEvents, resolveWindow } from './rank';
+import { LATER_WINDOW_MS, queryWords, rankEvents, resolveWindow } from './rank';
 import { SearchRequestSchema } from './schema';
 import { trySimilarities } from './semantic';
 import { createSession } from './session';
@@ -33,7 +33,7 @@ export function voiceRouter(deps: AppDeps): Router {
     });
     // Needs a database (pgvector does the comparison) and an embedding model; without either, or on failure, words rank alone.
     const similarity =
-      deps.pool && embed && body.query
+      deps.pool && embed && body.query && queryWords(body.query).length > 0
         ? await trySimilarities(deps.pool, embed, body.query, events.map((e) => e.id), SEMANTIC_TIMEOUT_MS)
         : null;
     res.json(rankEvents(events, buildings, body, now, similarity ?? undefined));

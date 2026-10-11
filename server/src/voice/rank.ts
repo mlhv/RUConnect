@@ -12,12 +12,18 @@ export const WEIGHTS = {
   near: 3,
   endsAfterWindow: -2,
   attendance: 0.5,
-  semantic: 12,
+  semantic: 8,
 };
-/** Cosine similarity at or below this adds nothing: unrelated texts still score about this high. */
-export const SEMANTIC_FLOOR = 0.5;
+// Measured on Oct 11 with gemini-embedding-001 at 768 dimensions over the seed events: an unrelated query peaks
+// near 0.55 to 0.59 ("quantum physics lecture", "I want to dance"), a related one scores 0.61 to 0.69.
+/** Cosine similarity at or below this adds nothing. */
+export const SEMANTIC_FLOOR = 0.55;
+/** Cosine similarity that earns the whole `semantic` weight. */
+export const SEMANTIC_FULL = 0.7;
+/** Similarities are rounded to this before scoring: two robotics events came out 0.008 apart, which says nothing about which is better. */
+export const SEMANTIC_STEP = 0.02;
 /** Cosine similarity from which an event counts as matching the query without sharing a word with it. */
-export const SEMANTIC_MATCH = 0.62;
+export const SEMANTIC_MATCH = 0.6;
 export const NEAR_RADIUS_M = 400;
 export const ATTENDANCE_CAP = 500;
 export const MIN_OVERLAP_MS = 30 * 60_000;
@@ -112,7 +118,8 @@ function score(
   if (req.freeFood === 'prefer' && e.freeFood) s += WEIGHTS.freeFood;
   if (distance !== null) s += WEIGHTS.near * Math.max(0, 1 - distance / NEAR_RADIUS_M);
   if (endsAfterWindow) s += WEIGHTS.endsAfterWindow;
-  s += (WEIGHTS.semantic * Math.max(0, similarity - SEMANTIC_FLOOR)) / (1 - SEMANTIC_FLOOR);
+  const rounded = Math.round(similarity / SEMANTIC_STEP) * SEMANTIC_STEP;
+  s += WEIGHTS.semantic * Math.min(1, Math.max(0, (rounded - SEMANTIC_FLOOR) / (SEMANTIC_FULL - SEMANTIC_FLOOR)));
   s += (WEIGHTS.attendance * Math.min(e.expectedAttendance ?? 0, ATTENDANCE_CAP)) / ATTENDANCE_CAP;
   return s;
 }
@@ -120,6 +127,7 @@ function score(
 /**
  * Pure: filters by publication, window, and required food, then orders by score. No I/O.
  * `similarity` maps event ids to the cosine similarity between the event and the query; an event without one ranks on words alone.
+ * It is ignored when the query has no interest words, where it would only be noise.
  */
 export function rankEvents(
   events: CampusEvent[], buildings: Building[], req: SearchRequest, now: string, similarity: Map<string, number> = new Map(),
@@ -138,7 +146,7 @@ export function rankEvents(
         const building = byId.get(event.buildingId);
         const distance = anchor && building ? distanceM(anchor, building) : null;
         const endsAfterWindow = Date.parse(event.end) > to;
-        const sim = similarity.get(event.id) ?? 0;
+        const sim = q.length > 0 ? similarity.get(event.id) ?? 0 : 0;
         const hit: Hit = {
           event,
           distanceM: distance === null ? null : Math.round(distance),

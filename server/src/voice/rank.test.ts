@@ -173,6 +173,27 @@ describe('rankEvents', () => {
     expect(flags).toMatchObject({ study: true, build: false, drones: false });
   });
 
+  it('ignores similarity when the query is only filler, where it would be noise', () => {
+    const req = { query: 'something cool??' };
+    const boosted = rankEvents(events, buildings, req, NOW, new Map([['drones', 0.9]]));
+    expect(ids(boosted.matches)).toEqual(ids(rankEvents(events, buildings, req, NOW).matches));
+  });
+
+  it('gives a similarity typical of unrelated text no lift', () => {
+    const req = { query: 'chess' };
+    const noise = rankEvents(events, buildings, req, NOW, new Map([['drones', 0.53]]));
+    expect(ids(noise.matches)).toEqual(ids(rankEvents(events, buildings, req, NOW).matches));
+  });
+
+  it('does not let a hair of similarity reorder two events that are equally close', () => {
+    const pair = parseSeedEvents([
+      ev('big', 'Robotics Team Demo', 'club', 'student-center', '14:00', '15:00', { tags: ['robotics'], expectedAttendance: 150 }),
+      ev('small', 'Robotics Club Info', 'club', 'student-center', '14:00', '15:00', { tags: ['robotics'], expectedAttendance: 50 }),
+    ]);
+    const res = rankEvents(pair, buildings, { query: 'robotics' }, NOW, new Map([['big', 0.675], ['small', 0.683]]));
+    expect(ids(res.matches)).toEqual(['big', 'small']);
+  });
+
   it('keeps a word match ahead of a weak similarity', () => {
     const res = rankEvents(events, buildings, { query: 'robotics' }, NOW, new Map([['study', 0.56], ['build', 0.6]]));
     expect(ids(res.matches).indexOf('build')).toBeLessThan(ids(res.matches).indexOf('study'));
