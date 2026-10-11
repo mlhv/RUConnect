@@ -50,7 +50,9 @@ export function createTools(deps: ToolDeps): Tools {
 
     const realNow = deps.realNow?.() ?? new Date().toISOString();
     const from = rest.from && rebaseToAppDate(rest.from, now, realNow);
-    const to = rest.to && rebaseToAppDate(rest.to, now, realNow);
+    let to = rest.to && rebaseToAppDate(rest.to, now, realNow);
+    // A window that crosses midnight ("tonight until midnight") was dated correctly: moving its end back would close it.
+    if (to && to !== rest.to && Date.parse(to) <= Math.max(Date.parse(from ?? now), Date.parse(now))) to = rest.to;
     const rebased = from !== rest.from || to !== rest.to;
 
     const request: SearchRequest = { ...rest, from, to };

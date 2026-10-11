@@ -154,8 +154,13 @@ describe('findEvents with a demo clock', () => {
     expect(text).toContain('Now Sat 1:30 PM. Window: from 5:00 PM.');
     expect(text).toContain('Today is Saturday, October 10. The dates you sent were for a different day');
 
+    await tools.findEvents({ from: '2026-10-10T17:00:00-04:00', to: '2026-10-11T00:00:00-04:00' });
+    expect(search.mock.calls[1][0]).toMatchObject({ from: '2026-10-10T17:00:00-04:00', to: '2026-10-11T00:00:00-04:00' });
+    await tools.findEvents({ to: '2026-10-11T00:00:00-04:00' });
+    expect(search.mock.calls[2][0].to).toBe('2026-10-11T00:00:00-04:00');
+
     const kept = await tools.findEvents({ to: '2026-10-10T16:00:00-04:00' });
-    expect(search.mock.calls[1][0].to).toBe('2026-10-10T16:00:00-04:00');
+    expect(search.mock.calls[3][0].to).toBe('2026-10-10T16:00:00-04:00');
     expect(kept).not.toContain('The dates you sent');
   });
 });

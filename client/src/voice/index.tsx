@@ -87,7 +87,6 @@ function Panel() {
       setStarting(false);
       return;
     }
-    demoNow.current = session.now;
     window.speechSynthesis?.cancel();
     startSession({
       signedUrl: session.signedUrl,
@@ -107,6 +106,8 @@ function Panel() {
       onError: (message) => {
         console.warn('Voice session error:', message);
         setTextMode('Voice connection failed. Type instead.');
+        // Not every error closes the call. End it so the controls and the call agree.
+        endSession();
       },
       onDisconnect: (details) => {
         if (details.reason === 'error') setTextMode('Voice disconnected. Type instead.');
@@ -122,8 +123,12 @@ function Panel() {
     setText('');
     dispatch({ type: 'add', role: 'user', text: sentence });
     if (connected) {
-      sendUserMessage(sentence);
-      return;
+      try {
+        sendUserMessage(sentence);
+        return;
+      } catch {
+        // The call dropped between render and submit: answer from the fallback instead.
+      }
     }
     setBusy(true);
     dispatch({ type: 'add', role: 'tool', text: 'Searching events…' });

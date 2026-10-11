@@ -1,10 +1,10 @@
 # Voice handoff
 
-For a fresh session picking up Slice C (voice). Owner: `mlhv`. Written Oct 10, 2026, before any voice code exists.
+For a fresh session picking up Slice C (voice). Owner: `mlhv`. First written Oct 10, 2026; updated Oct 11 after the slice was built.
 
 To start a new session, open Claude Code in this repo and say:
 
-> I own Slice C (voice). Read `docs/handoff/voice.md` and build it in the order it gives.
+> I own Slice C (voice). Read `docs/handoff/voice.md` first.
 
 ## Goal
 
@@ -39,7 +39,7 @@ Dashboard lessons from the first setup:
 - Rollback: once the script passes, duplicate the agent and leave the copy untouched. Rolling back is setting `ELEVENLABS_AGENT_ID` to the copy's id and restarting the server.
 
 Known behaviour and gaps:
-- With `DEMO_NOW` set, the agent's model writes dates from the real day, not the demo day. `demoClock.ts` moves those dates onto the demo day inside `find_events`. Side effect: a correctly dated "tomorrow" that lands on the real today is moved back a day.
+- With `DEMO_NOW` set, the agent's model writes dates from the real day, not the demo day. `demoClock.ts` moves those dates onto the demo day inside `find_events`. Side effect: with a one-day gap a correct demo date and a real-clock date cannot be told apart, so every correctly dated time on or after the real today is moved back a day ("what's on Thursday?" can search Wednesday). A window whose end would land before its start keeps its original end, so "tonight until midnight" still works.
 - The typed fallback does not understand times. When the top pick shares no interest word with the question it says "Nothing matches that exactly. The top pick coming up is …".
 - If the agent ends a call itself the panel returns to Talk with no message; only an error disconnect switches to text mode.
 - Not verified by an agent session: the map highlight and fly-to on screen (no Mapbox token on the machine that ran the checks), whether `openBuilding` opens a panel, whether `setTime` moves the slider, and the browser's read-aloud in text mode.
@@ -89,7 +89,7 @@ Checked against the ElevenLabs documentation and the installed `@elevenlabs/reac
 ## Known gaps outside this slice
 
 - `mapController.openBuilding` is a no-op until the map owner builds the building panel. Call it anyway.
-- The map has not been seen rendering in a browser yet. Check it with a Mapbox token before debugging voice-to-map behavior.
+- The map needs `VITE_MAPBOX_TOKEN` to render. The owner has run the voice demo with it; the agent sessions that built this slice never saw the map on screen.
 - Building coordinates are approximate, so "near" is rough until the map owner corrects `data/buildings.json`.
 - The seed events are samples and will be replaced; do not write tests against `data/events.seed.json`, use `testFixture()`.
 

@@ -8,8 +8,8 @@ export type TranscriptAction = { type: 'add'; role: Line['role']; text: string }
 
 const MAX_LINES = 50;
 
-/** Expressive voice models write delivery cues such as "[excited]" into the agent's text. */
-const DELIVERY_TAG = /\[[a-z][a-z ]{0,30}\]\s*/gi;
+/** Expressive voice models write delivery cues such as "[excited]" into the agent's text. Lowercase only, so "[CANCELLED]" in a title stays. */
+const DELIVERY_TAG = /\[[a-z][a-z ]{0,30}\]\s*/g;
 
 /** The conversation as shown in the panel. Drops blanks, an immediate repeat (an echoed typed message), and the agent's delivery tags. */
 export function transcriptReducer(state: Line[], action: TranscriptAction): Line[] {
