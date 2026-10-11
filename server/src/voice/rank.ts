@@ -77,11 +77,23 @@ function fitsWindow(e: CampusEvent, from: number, to: number): boolean {
   return overlap > 0 && overlap >= Math.min(MIN_OVERLAP_MS, end - start, to - from);
 }
 
+function fieldWords(e: CampusEvent) {
+  return {
+    title: new Set(words(e.title)),
+    tags: new Set(e.tags.flatMap(words)),
+    category: new Set(words(e.category)),
+    description: new Set(words(e.description)),
+  };
+}
+
+/** Whether any of the words appears in the event's title, tags, category, or description. */
+function mentions(e: CampusEvent, ws: string[]): boolean {
+  const fields = Object.values(fieldWords(e));
+  return ws.some((w) => fields.some((f) => f.has(w)));
+}
+
 function score(e: CampusEvent, distance: number | null, endsAfterWindow: boolean, q: string[], req: SearchRequest): number {
-  const title = new Set(words(e.title));
-  const tags = new Set(e.tags.flatMap(words));
-  const category = new Set(words(e.category));
-  const description = new Set(words(e.description));
+  const { title, tags, category, description } = fieldWords(e);
   let s = 0;
   for (const w of q) {
     if (title.has(w)) s += WEIGHTS.title;
@@ -103,6 +115,9 @@ export function rankEvents(events: CampusEvent[], buildings: Building[], req: Se
   const byId = new Map(buildings.map((b) => [b.id, b]));
   const anchor = req.nearBuildingId ? byId.get(req.nearBuildingId) ?? null : null;
   const q = queryWords(req.query);
+  // Interest words only: a number ("until 4") or the anchor's own name ("the library") says nothing about the event.
+  const place = new Set(anchor ? [anchor.name, ...anchor.aliases].flatMap(words) : []);
+  const interests = q.filter((w) => !/^\d+$/.test(w) && !place.has(w));
 
   const rank = (list: CampusEvent[]): Hit[] =>
     list
@@ -110,7 +125,12 @@ export function rankEvents(events: CampusEvent[], buildings: Building[], req: Se
         const building = byId.get(event.buildingId);
         const distance = anchor && building ? distanceM(anchor, building) : null;
         const endsAfterWindow = Date.parse(event.end) > to;
-        const hit: Hit = { event, distanceM: distance === null ? null : Math.round(distance), endsAfterWindow };
+        const hit: Hit = {
+          event,
+          distanceM: distance === null ? null : Math.round(distance),
+          endsAfterWindow,
+          matchesQuery: interests.length === 0 || mentions(event, interests),
+        };
         return { hit, score: score(event, distance, endsAfterWindow, q, req) };
       })
       .sort(

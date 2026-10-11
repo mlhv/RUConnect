@@ -145,6 +145,21 @@ describe('rankEvents', () => {
     expect(ids(rankEvents(twice, buildings, { query: 'robotics' }, NOW).matches)).toEqual(['a', 'c']);
   });
 
+  it('flags hits that share no interest word with the query', () => {
+    const flags = (req: Parameters<typeof rankEvents>[2]) =>
+      Object.fromEntries(rankEvents(events, buildings, req, NOW).matches.map((h) => [h.event.id, h.matchesQuery]));
+    expect(flags({ query: 'robotics' })).toMatchObject({ build: true, drones: true, study: false, market: false });
+    expect(Object.values(flags({ query: 'chess' })).every((m) => m === false)).toBe(true);
+  });
+
+  it('does not count filler, numbers, or the anchor building as interest words', () => {
+    const all = (req: Parameters<typeof rankEvents>[2]) =>
+      rankEvents(events, buildings, req, NOW).matches.every((h) => h.matchesQuery);
+    expect(all({})).toBe(true);
+    expect(all({ query: 'something cool??' })).toBe(true);
+    expect(all({ query: "I'm free until 4, what's near the library?", nearBuildingId: 'alexander-library' })).toBe(true);
+  });
+
   it('survives an event whose building is not in the list', () => {
     const orphan = parseSeedEvents([ev('lost', 'Robotics Pop-up', 'club', 'nowhere', '14:00', '15:00')]);
     const res = rankEvents(orphan, buildings, { query: 'robotics', nearBuildingId: 'alexander-library' }, NOW);

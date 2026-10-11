@@ -6,6 +6,7 @@ export const HitSchema = z.object({
   event: CampusEventSchema,
   distanceM: z.number().nullable(),
   endsAfterWindow: z.boolean(),
+  matchesQuery: z.boolean(),
 });
 export type Hit = z.infer<typeof HitSchema>;
 

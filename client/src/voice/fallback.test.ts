@@ -33,6 +33,17 @@ describe('runFallback', () => {
     expect(search.mock.calls[0][0]).toEqual({ query: 'live music' });
   });
 
+  it('says nothing matches exactly when the top pick shares no interest word, and still shows it', async () => {
+    const market = hit({ id: 'market', title: 'Night Market', buildingId: 'scott-hall' }, null, false, false);
+    const { deps, calls, spoken } = setup({ matches: [market], later: [] });
+    const said = await runFallback('chess', deps);
+    expect(said).toBe(
+      'Nothing matches that exactly. The top pick coming up is Night Market at Scott Hall, 2:00 PM to 3:30 PM.',
+    );
+    expect(spoken).toEqual([said]);
+    expect(calls).toContain('flyTo:scott-hall');
+  });
+
   it('says so when nothing matches and does not move the camera', async () => {
     const { deps, calls, spoken } = setup({ matches: [], later: [] });
     const said = await runFallback('underwater basket weaving', deps);

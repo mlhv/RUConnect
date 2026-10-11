@@ -33,6 +33,7 @@ export async function runFallback(sentence: string, deps: FallbackDeps): Promise
   } else if (top) {
     await deps.tools.focusEvent({ eventId: top.event.id });
     said = speakHit(top, buildings, deps.now());
+    if (!top.matchesQuery) said = `Nothing matches that exactly. The top pick coming up is ${said}`;
   }
   deps.speak(said);
   return said;
