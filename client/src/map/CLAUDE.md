@@ -9,5 +9,5 @@ Owns `client/src/map/`. Design: spec section 6.
 - Read data from `useEventsStore` (`buildings`, `events`, `selectedTime`). Do not fetch events here.
 - `data/buildings.json` holds real OpenStreetMap outlines and centers. That file is owned by this slice, but its schema (`BuildingSeedSchema`) is frozen.
 - Per-building activity is derived here from the events already in `useEventsStore`; the spec's `GET /api/events/activity` route is not built.
-- Built: category colors, the pulse and ground glow, roof labels, dim context buildings, attendance beacons, the slider's play button, the click-to-open building panel.
+- Built: category colors, the pulse and ground glow, roof labels, dim context buildings, attendance beacons, the slider's play button, the click-to-open building panel, four campuses with a chip switcher.
 - Animate lit buildings through feature state only. Calling `setPaintProperty` with a new data-driven expression reloads the building tiles and drops their colors.

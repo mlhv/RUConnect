@@ -1,11 +1,13 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MapController } from '@ruconnect/shared';
 import { useEventsStore } from '../app/eventsStore';
 import { registerMapController } from '../app/mapController';
 import { CATEGORY_COLORS, beaconHeightM, buildingAttendance, buildingCategories } from './activity';
 import { BuildingPanel } from './BuildingPanel';
+import { CAMPUSES, campusAt, flightMs, liveCounts, type Campus } from './campus';
+import { CampusSwitcher } from './CampusSwitcher';
 import { approach } from './fade';
 import { beaconsToGeoJSON, buildingsToGeoJSON, cameraPadding, labelsToGeoJSON } from './geo';
 import { eventsForBuilding } from './panel';
@@ -22,11 +24,9 @@ const CONTEXT_LAYER = 'ru-context-3d';
 const BEACON_SOURCE = 'ru-beacons';
 const BEACON_LAYER = 'ru-beacons-3d';
 /** The camera opens a little further out and settles here, so the first view is already moving. */
-const OPENING_ZOOM = 16;
-const OPENING_BEARING = -20;
+const HOME = CAMPUSES[0];
 const OPENING_MS = 4500;
 const IS_EXTRUDED: mapboxgl.ExpressionSpecification = ['==', ['get', 'extrude'], 'true'];
-const CENTER: [number, number] = [-74.449, 40.5015];
 const BASE_COLOR = '#3a4a6b';
 const HIGHLIGHT_COLOR = '#ffd166';
 /** How far a lit building brightens towards white at the top of its pulse. */
@@ -35,11 +35,11 @@ const PULSE_PERIOD_MS = 2400;
 /** Time constant of the fade when a building lights up, goes dark, or its beacon changes height. */
 const FADE_TAU_MS = 280;
 const FRAME_MS = 33;
-const FLIGHT_MS = 3200;
 /** Degrees the camera swings round during a flight, and then per orbit leg once it has arrived. */
 const FLIGHT_TURN_DEG = 40;
 const ORBIT_TURN_DEG = 60;
 const ORBIT_MS = 30000;
+const CAMPUS_PITCH = 60;
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
 /**
@@ -85,6 +85,9 @@ export function MapView() {
   const highlightedRef = useRef<string[]>([]);
   const [ready, setReady] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [campusId, setCampusId] = useState(HOME.id);
+  /** Counts flights, so an older flight's arrival does not start an orbit over a newer one. */
+  const flightsRef = useRef(0);
   const buildings = useEventsStore((s) => s.buildings);
   const events = useEventsStore((s) => s.events);
   const selectedTime = useEventsStore((s) => s.selectedTime);
@@ -95,29 +98,28 @@ export function MapView() {
     const map = new mapboxgl.Map({
       container: container.current,
       style: 'mapbox://styles/mapbox/dark-v11',
-      center: CENTER,
-      zoom: OPENING_ZOOM - 0.6,
-      pitch: 60,
-      bearing: OPENING_BEARING - 15,
+      center: HOME.center,
+      zoom: HOME.zoom - 0.6,
+      pitch: CAMPUS_PITCH,
+      bearing: HOME.bearing - 15,
       antialias: true,
     });
     mapRef.current = map;
-    /** Counts flights, so an older flight's arrival does not start an orbit over a newer one. */
-    let flights = 0;
 
     const controller: MapController = {
       flyTo(buildingId) {
         const b = useEventsStore.getState().buildings.find((x) => x.id === buildingId);
         if (!b) return;
-        const flight = ++flights;
+        const flight = ++flightsRef.current;
         map.flyTo({
           center: [b.lng, b.lat], zoom: 17.2, pitch: 62, bearing: map.getBearing() + FLIGHT_TURN_DEG,
-          duration: FLIGHT_MS, curve: 1.3, easing: easeInOut, padding: cameraPadding(window.innerWidth),
+          duration: flightMs(map.getCenter().distanceTo(new mapboxgl.LngLat(b.lng, b.lat))),
+          curve: 1.3, easing: easeInOut, padding: cameraPadding(window.innerWidth),
         });
         map.once('moveend', () => {
           // Circle the building slowly once there. Skipped when the flight was cut short; any input stops it.
           const arrived = map.getCenter().distanceTo(new mapboxgl.LngLat(b.lng, b.lat)) < 5;
-          if (flight !== flights || !arrived) return;
+          if (flight !== flightsRef.current || !arrived) return;
           map.easeTo({ bearing: map.getBearing() + ORBIT_TURN_DEG, duration: ORBIT_MS, easing: (t) => t });
         });
       },
@@ -214,7 +216,11 @@ export function MapView() {
         },
       });
       map.setPadding(cameraPadding(window.innerWidth));
-      map.easeTo({ zoom: OPENING_ZOOM, bearing: OPENING_BEARING, duration: OPENING_MS, easing: easeInOut });
+      map.easeTo({ zoom: HOME.zoom, bearing: HOME.bearing, duration: OPENING_MS, easing: easeInOut });
+      map.on('moveend', () => {
+        const { lng, lat } = map.getCenter();
+        setCampusId(campusAt(lng, lat).id);
+      });
       map.on('click', (e) => {
         const hit = map.queryRenderedFeatures(e.point, { layers: [LAYER] })[0];
         setOpenId(hit?.id == null ? null : String(hit.id));
@@ -297,6 +303,19 @@ export function MapView() {
   }, [ready]);
 
   const openBuilding = buildings.find((b) => b.id === openId);
+  const counts = useMemo(() => liveCounts(events, buildings, selectedTime), [events, buildings, selectedTime]);
+
+  function flyToCampus(campus: Campus) {
+    const map = mapRef.current;
+    if (!map) return;
+    flightsRef.current++;
+    setCampusId(campus.id);
+    map.flyTo({
+      center: campus.center, zoom: campus.zoom, pitch: CAMPUS_PITCH, bearing: campus.bearing,
+      duration: flightMs(map.getCenter().distanceTo(new mapboxgl.LngLat(...campus.center))),
+      curve: 1.3, easing: easeInOut, padding: cameraPadding(window.innerWidth),
+    });
+  }
 
   if (!TOKEN) {
     return <div className="map-missing">Set VITE_MAPBOX_TOKEN in .env and restart to see the map.</div>;
@@ -311,6 +330,7 @@ export function MapView() {
           onClose={() => setOpenId(null)}
         />
       )}
+      <CampusSwitcher current={campusId} counts={counts} onSelect={flyToCampus} />
       <TimeSlider />
     </>
   );
