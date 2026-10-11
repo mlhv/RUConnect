@@ -20,7 +20,8 @@ export function voiceRouter(deps: AppDeps): Router {
     }
     const events = await deps.store.listEvents({
       from: new Date(from).toISOString(),
-      to: new Date(to + LATER_WINDOW_MS).toISOString(),
+      // +1 because the stores treat `to` as exclusive and rankEvents keeps an event starting exactly at the edge.
+      to: new Date(to + LATER_WINDOW_MS + 1).toISOString(),
       status: 'published',
     });
     res.json(rankEvents(events, buildings, body, now));

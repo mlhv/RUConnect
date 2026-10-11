@@ -20,13 +20,17 @@ const ev = (
 
 const raw = [
   ev('build', 'Robotics Club Build Session', 'club', 'student-center', '14:00', '15:30',
-    { tags: ['robotics', 'engineering'], freeFood: true, expectedAttendance: 60 }),
+    { tags: ['robotics', 'engineering'], freeFood: true, expectedAttendance: 60,
+      description: 'Build and test a line-following robot with the Robotics Club. Pizza provided.' }),
   ev('study', 'Study Break: Snacks and Board Games', 'social', 'alexander-library', '14:30', '15:30',
-    { tags: ['study', 'games'], freeFood: true, expectedAttendance: 40 }),
+    { tags: ['study', 'games'], freeFood: true, expectedAttendance: 40,
+      description: 'Take a break from midterms with snacks and board games in the lobby.' }),
   ev('drones', 'Intro to Drones Open Lab', 'academic', 'scott-hall', '14:00', '15:00',
-    { tags: ['robotics', 'drones'], expectedAttendance: 30 }),
+    { tags: ['robotics', 'drones'], expectedAttendance: 30,
+      description: 'Fly a small drone and learn the basics of autonomous flight.' }),
   ev('demo', 'Robotics Team Demo and Scrimmage', 'sports', 'college-ave-gym', '16:00', '17:30',
-    { tags: ['robotics', 'competition'], freeFood: true, expectedAttendance: 150 }),
+    { tags: ['robotics', 'competition'], freeFood: true, expectedAttendance: 150,
+      description: 'Watch the competition robots run a practice match. Free snacks.' }),
   ev('market', 'Night Market at The Yard', 'food', 'the-yard', '18:00', '21:00',
     { tags: ['food trucks', 'vendors'], expectedAttendance: 400 }),
   ev('draft', 'Unreviewed Robotics Flyer', 'club', 'student-center', '14:00', '15:00',
@@ -54,6 +58,14 @@ describe('rankEvents', () => {
     const res = rankEvents(events, buildings, demo, NOW);
     expect(ids(res.matches)).toEqual(['build', 'study', 'drones']);
     expect(res.later).toEqual([]);
+  });
+
+  it('keeps the build session first for the typed fallback sentence, which has no end time', () => {
+    const typed = {
+      query: "I'm free until 4, I like robotics and free food, what's near the library?",
+      freeFood: 'prefer', nearBuildingId: 'alexander-library',
+    } as const;
+    expect(rankEvents(events, buildings, typed, NOW).matches[0].event.id).toBe('build');
   });
 
   it('reports distance to the anchor building in meters', () => {
