@@ -102,9 +102,41 @@ Checked against the ElevenLabs documentation and the installed `@elevenlabs/reac
 - Compare times as instants (`Date.parse`), never as strings: mock mode returns `-04:00` strings and Postgres returns `Z` strings.
 - Adding a dependency touches frozen `package.json` files: announce it in team chat first.
 
+## Before recording or presenting the demo
+
+Written Oct 11 when voice work stopped. Nothing below has been done yet unless it says so.
+
+Set up the machine that presents:
+- [ ] `.env` has `MOCK=0`, the shared Tiger `DATABASE_URL` ending in `?uselibpqcompat=true&sslmode=require`, your own `DB_SCHEMA`, `GEMINI_API_KEY` on a billed project, `GEMINI_EMBED_MODEL=gemini-embedding-001`, `GEMINI_VISION_MODEL=gemini-3.8-flash`, both ElevenLabs values, `DEMO_NOW=2026-10-10T13:30:00-04:00`, and `VITE_MAPBOX_TOKEN`.
+- [ ] Check the Gemini project still has credit. It ran out once on Oct 11 (error 402); when that happens search silently falls back to words and no "Matched by meaning" badge appears.
+- [ ] Restart `npm run dev` after any `.env` change.
+- [ ] Ask one throwaway question with a real interest word ("robotics") before recording. The first search after a seed or reset embeds every event and can be slow or word-only.
+- [ ] Agree who sets `MOCK=1` and restarts if the database or Gemini fails. With `MOCK=1` the script still works but nothing is matched by meaning.
+
+Never seen working; look at each once before recording:
+- [ ] A live call with the new microphone button: the pulse while listening, the bars while the agent speaks, the grey muted look, the "Live" marker, and End.
+- [ ] Clicking a result card moves the map to that building.
+- [ ] The map highlight and fly-to during a spoken answer, and whether the time slider moves.
+- [ ] Script lines 1 to 3 spoken through the agent with `MOCK=0`. They were only checked by sending the expected search directly.
+- [ ] The semantic line spoken: "I like tinkering with machines". Expect the robotics and drone events with gold "Matched by meaning" badges. The agent shortens questions to a few words before searching; "tinkering machines" still works, a single vague word ("singing") does not. If the badges do not appear, read what the agent searched for in the server log.
+- [ ] The flyer line. `1-clean-robotics.png` is already in `dev_mlhv` from a test on Oct 11, so uploading it again is treated as a duplicate. Use another flyer from `data/captures/test-flyers/` (2 to 4 are College Ave and cached; 5 is Busch and is rejected on purpose), and ask about that flyer's event instead of robotics. Or run `npm run db:reset` first to use flyer 1 as scripted, then repeat the throwaway question.
+- [ ] "Later this week" questions: the date correction can move the window back a day (see Known behaviour). Say the line once and check the day in the answer.
+- [ ] With three result cards the transcript scrolls and the question slides out of view. If that looks wrong on camera, lower `MAX_CARDS` in `resultCards.ts`.
+
+For the recording itself:
+- [ ] Use `localhost` or HTTPS, or the microphone is blocked.
+- [ ] One sentence for the Tiger prize: Tiger Postgres stores every event the flyer swarm reads and runs the vector search behind the voice assistant. Show a gold badge while saying it.
+- [ ] Once the script passes, duplicate the ElevenLabs agent as the rollback copy (see Dashboard lessons).
+
 ## Before the hackathon submission
 
 The ElevenLabs prize requires a pull request to `elevenlabs/showcase`. Drafts and a checklist are in `docs/showcase/README.md`. It needs a working voice demo, a demo or video link, a cover image, and each author's details.
+
+- [ ] Reread `docs/showcase/projects/ruconnect.mdx`: it was drafted before the feature existed and does not mention semantic search, the result cards, or Tiger.
+- [ ] Record the video and add its link. Make the 1200x630 cover image.
+- [ ] Each author fills in and renames their file in `docs/showcase/authors/`.
+- [ ] Tell the other two the `.env` values in the description of pull request #15, and share `DATABASE_URL` outside git.
+- [ ] Tiger prize: there are no written criteria. Find out from the sponsor how to enter and whether they want a link, a video, or a live look.
 
 ## Update this file
 
