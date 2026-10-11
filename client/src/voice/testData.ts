@@ -21,8 +21,10 @@ export function makeEvent(over: Partial<CampusEvent> & { id: string }): CampusEv
   ])[0];
 }
 
-export function hit(over: Partial<CampusEvent> & { id: string }, distanceM: number | null = null, endsAfterWindow = false): Hit {
-  return { event: makeEvent(over), distanceM, endsAfterWindow };
+export function hit(
+  over: Partial<CampusEvent> & { id: string }, distanceM: number | null = null, endsAfterWindow = false, matchesQuery = true,
+): Hit {
+  return { event: makeEvent(over), distanceM, endsAfterWindow, matchesQuery };
 }
 
 export function fakeMap(): { map: MapController; calls: string[] } {

@@ -17,6 +17,8 @@ export const HitSchema = z.object({
   /** Meters from the event's building to the anchor building, or null without an anchor. */
   distanceM: z.number().nullable(),
   endsAfterWindow: z.boolean(),
+  /** False only when the query has interest words and none of them appears in the event's text. */
+  matchesQuery: z.boolean(),
 });
 export type Hit = z.infer<typeof HitSchema>;
 
