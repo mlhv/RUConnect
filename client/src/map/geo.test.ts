@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildingsToGeoJSON } from './geo';
+import { buildingsToGeoJSON, cameraPadding } from './geo';
 
 describe('buildingsToGeoJSON', () => {
   it('makes one polygon feature per building, keyed by id', () => {
@@ -14,5 +14,15 @@ describe('buildingsToGeoJSON', () => {
 
   it('returns an empty collection for no buildings', () => {
     expect(buildingsToGeoJSON([]).features).toEqual([]);
+  });
+});
+
+describe('cameraPadding', () => {
+  it('keeps the fly-to target clear of the sidebar on a wide screen', () => {
+    expect(cameraPadding(1440)).toEqual({ top: 0, bottom: 0, left: 0, right: 352 });
+  });
+
+  it('adds no padding when the sidebar spans the screen', () => {
+    expect(cameraPadding(390)).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
   });
 });
