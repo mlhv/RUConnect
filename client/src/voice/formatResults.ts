@@ -48,7 +48,8 @@ function sameDay(a: string, b: string): boolean {
   return pa.year === pb.year && pa.month === pb.month && pa.day === pb.day;
 }
 
-function when(hit: Hit, now: string): string {
+/** "2:00 PM to 3:30 PM", with the weekday in front when the event is not today. */
+export function when(hit: Hit, now: string): string {
   const { start, end } = hit.event;
   return `${sameDay(start, now) ? '' : `${shortDay(start)} `}${formatTime(start)} to ${formatTime(end)}`;
 }
