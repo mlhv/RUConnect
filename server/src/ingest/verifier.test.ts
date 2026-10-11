@@ -51,6 +51,10 @@ describe('verify', () => {
     expect(verify({ ...draft, title: null }, { source: 'flyer', now })).toMatchObject({ ok: false });
   });
 
+  it('treats an unreadable start as no time instead of throwing', () => {
+    expect(verify({ ...draft, start: 'next Thursday-ish', end: null }, { source: 'flyer', now })).toEqual({ ok: false, reason: 'no date or time' });
+  });
+
   it('rejects an end before the start', () => {
     const r = verify({ ...draft, end: '2026-10-12T18:00:00-04:00' }, { source: 'flyer', now });
     expect(r).toMatchObject({ ok: false });
