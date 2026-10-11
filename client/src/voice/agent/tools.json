@@ -1,0 +1,23 @@
+[
+  {
+    "name": "find_events",
+    "description": "Search campus events. Highlights the matching buildings on the map and returns the matches, best first, with their ids.",
+    "waitForResponse": true,
+    "parameters": [
+      { "name": "query", "type": "string", "required": false, "description": "The student's interests as a few plain words, e.g. \"robotics\". No food, times, or places." },
+      { "name": "from", "type": "string", "required": false, "description": "Start of the time window, ISO 8601 with UTC offset, e.g. 2026-10-10T16:00:00-04:00. Omit to start now." },
+      { "name": "to", "type": "string", "required": false, "description": "End of the time window, ISO 8601 with UTC offset. Omit when the student gave no limit." },
+      { "name": "category", "type": "string", "required": false, "description": "One of: academic, social, career, sports, arts, club, food, other." },
+      { "name": "freeFood", "type": "string", "required": false, "description": "\"prefer\" to rank events with free food higher, \"require\" to return only those." },
+      { "name": "nearBuildingName", "type": "string", "required": false, "description": "A building the student mentioned, in their words, e.g. \"the library\"." }
+    ]
+  },
+  {
+    "name": "focus_event",
+    "description": "Fly the map to an event's building and open it. Use an id returned by find_events.",
+    "waitForResponse": true,
+    "parameters": [
+      { "name": "eventId", "type": "string", "required": true, "description": "The id of the event, exactly as find_events returned it." }
+    ]
+  }
+]
