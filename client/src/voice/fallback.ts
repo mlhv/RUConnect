@@ -21,14 +21,16 @@ export async function runFallback(sentence: string, deps: FallbackDeps): Promise
   const near = findMentionedBuilding(query, buildings);
 
   await deps.tools.findEvents({
-    query,
+    query: query.slice(0, 200), // the server rejects a longer query
     freeFood: /\bfree food\b/i.test(query) ? 'prefer' : undefined,
     nearBuildingName: near?.name,
   });
 
   const top = deps.tools.lastMatches()[0];
   let said = 'I could not find anything like that right now. Try different interests.';
-  if (top) {
+  if (deps.tools.lastSearchFailed()) {
+    said = 'Search is unavailable right now. Try again in a moment.';
+  } else if (top) {
     await deps.tools.focusEvent({ eventId: top.event.id });
     said = speakHit(top, buildings, deps.now());
   }

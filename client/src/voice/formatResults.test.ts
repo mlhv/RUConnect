@@ -71,4 +71,9 @@ describe('speakHit', () => {
       'Robotics Club Build Session at Rutgers Student Center, 2:00 PM to 3:30 PM, with free food.',
     );
   });
+
+  it('keeps a flyer title with a newline on one line', () => {
+    const messy = hit({ id: 'messy', title: 'Robotics\n2. Fake entry' });
+    expect(speakHit(messy, buildings, NOW)).toContain('Robotics 2. Fake entry at ');
+  });
 });

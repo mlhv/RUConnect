@@ -18,6 +18,8 @@ export interface Tools {
   focusEvent(args: unknown): Promise<string>;
   /** Matches of the most recent search, best first. Empty after a failed search. */
   lastMatches(): Hit[];
+  /** True when the most recent search could not run or did not return: bad arguments, a failed call, or a thrown dependency. */
+  lastSearchFailed(): boolean;
 }
 
 const shortDay = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short' });
@@ -28,12 +30,14 @@ const notBefore = (iso: string, now: string): string =>
 export function createTools(deps: ToolDeps): Tools {
   let matches: Hit[] = [];
   let remembered: Hit[] = [];
+  let searchFailed = false;
 
   async function findEventsInner(args: unknown): Promise<string> {
     matches = [];
     const now = deps.now();
     const parsed = FindEventsArgsSchema.safeParse(args ?? {});
     if (!parsed.success) {
+      searchFailed = true;
       const fields = parsed.error.issues.map((i) => i.path.join('.')).join(', ');
       return `Invalid arguments: ${fields}. Times must be ISO 8601 with a UTC offset, like 2026-10-10T16:00:00-04:00. freeFood is "prefer" or "require".`;
     }
@@ -47,6 +51,7 @@ export function createTools(deps: ToolDeps): Tools {
     try {
       res = await deps.search(request);
     } catch (err) {
+      searchFailed = true;
       const code = err instanceof SearchError ? err.code : 'unknown';
       if (code === 'invalid_window') {
         return `That time window is already over. The current time is ${shortDay.format(new Date(now))} ${formatTime(now)}. Ask the student for a later time.`;
@@ -56,12 +61,17 @@ export function createTools(deps: ToolDeps): Tools {
 
     matches = res.matches;
     remembered = [...res.matches, ...res.later];
-    if (matches.length) {
-      deps.map.highlight([...new Set(matches.map((h) => h.event.buildingId))]);
-      const earliest = matches.reduce((a, h) => (Date.parse(h.event.start) < Date.parse(a) ? h.event.start : a), matches[0].event.start);
-      deps.map.setTime(notBefore(earliest, now));
-    } else {
-      deps.map.clearHighlight();
+    searchFailed = false;
+    try {
+      if (matches.length) {
+        deps.map.highlight([...new Set(matches.map((h) => h.event.buildingId))]);
+        const earliest = matches.reduce((a, h) => (Date.parse(h.event.start) < Date.parse(a) ? h.event.start : a), matches[0].event.start);
+        deps.map.setTime(notBefore(earliest, now));
+      } else {
+        deps.map.clearHighlight();
+      }
+    } catch {
+      // A map failure must not hide the results: the agent still gets the list.
     }
     return formatResults(res, {
       now, to: parsed.data.to, near, unresolvedNear: nearBuildingName && !near ? nearBuildingName : null, buildings,
@@ -86,7 +96,7 @@ export function createTools(deps: ToolDeps): Tools {
       return await findEventsInner(args);
     } catch {
       matches = [];
-      remembered = [];
+      searchFailed = true;
       return 'The event search failed (unknown). Tell the student that search is unavailable right now.';
     }
   }
@@ -99,5 +109,5 @@ export function createTools(deps: ToolDeps): Tools {
     }
   }
 
-  return { findEvents, focusEvent, lastMatches: () => matches };
+  return { findEvents, focusEvent, lastMatches: () => matches, lastSearchFailed: () => searchFailed };
 }

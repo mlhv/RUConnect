@@ -42,6 +42,12 @@ describe('POST /api/voice/search', () => {
     expect(ids(res.body.later)).toEqual(['seed-brunch-social', 'seed-writing-workshop']);
   });
 
+  it('offers an event that starts exactly three hours after the window ends', async () => {
+    const res = await search({ from: '2026-10-11T06:00:00-04:00', to: '2026-10-11T07:00:00-04:00' });
+    expect(res.body.matches).toEqual([]);
+    expect(ids(res.body.later)).toContain('seed-brunch-social');
+  });
+
   it('rejects malformed input', async () => {
     const res = await search({ from: 'yesterday' });
     expect(res.status).toBe(400);

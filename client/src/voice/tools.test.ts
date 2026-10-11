@@ -80,24 +80,54 @@ describe('findEvents', () => {
   });
 
   it('returns a sentence when the search fails, and forgets old matches', async () => {
-    const { tools } = setup();
+    const { map } = fakeMap();
+    const search = vi.fn<(req: SearchRequest) => Promise<SearchResponse>>()
+      .mockResolvedValueOnce({ matches: [build, study], later: [] })
+      .mockRejectedValueOnce(new Error('boom'));
+    const tools = createTools({ search, map, getBuildings: () => buildings, getEvents: () => [], now: () => NOW });
     await tools.findEvents({});
-    const failing = setup(new Error('boom'));
-    expect(await failing.tools.findEvents({})).toContain('search failed');
-    expect(failing.tools.lastMatches()).toEqual([]);
+    expect(tools.lastMatches()).toHaveLength(2);
+    expect(await tools.findEvents({})).toContain('search failed');
+    expect(tools.lastMatches()).toEqual([]);
+  });
+
+  it('reports whether the last search failed', async () => {
+    const ok = setup();
+    expect(ok.tools.lastSearchFailed()).toBe(false);
+    await ok.tools.findEvents({});
+    expect(ok.tools.lastSearchFailed()).toBe(false);
+    const failing = setup(new SearchError('server_error'));
+    await failing.tools.findEvents({});
+    expect(failing.tools.lastSearchFailed()).toBe(true);
+    const invalid = setup();
+    await invalid.tools.findEvents({ to: '4pm' });
+    expect(invalid.tools.lastSearchFailed()).toBe(true);
   });
 });
 
 describe('tools never throw', () => {
-  it('findEvents returns a sentence and forgets matches when the map throws', async () => {
+  it('findEvents still returns the results when the map throws', async () => {
     const { map } = fakeMap();
     const broken = createTools({
-      search: async () => ({ matches: [build], later: [] }),
+      search: async () => ({ matches: [build, study], later: [] }),
       map: { ...map, highlight: () => { throw new Error('map down'); } },
       getBuildings: () => buildings, getEvents: () => [], now: () => NOW,
     });
+    expect(await broken.findEvents({})).toContain('[id build]');
+    expect(broken.lastMatches().map((h) => h.event.id)).toEqual(['build', 'study']);
+    expect(broken.lastSearchFailed()).toBe(false);
+  });
+
+  it('findEvents returns a sentence and forgets matches when a dependency throws', async () => {
+    const { map } = fakeMap();
+    const broken = createTools({
+      search: async () => ({ matches: [build], later: [] }),
+      map,
+      getBuildings: () => { throw new Error('store down'); }, getEvents: () => [], now: () => NOW,
+    });
     expect(await broken.findEvents({})).toBe('The event search failed (unknown). Tell the student that search is unavailable right now.');
     expect(broken.lastMatches()).toEqual([]);
+    expect(broken.lastSearchFailed()).toBe(true);
   });
 
   it('focusEvent returns a sentence when the map throws', async () => {

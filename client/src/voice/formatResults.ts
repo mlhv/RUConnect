@@ -95,5 +95,5 @@ export function formatResults(res: SearchResponse, ctx: FormatContext): string {
 /** One sentence for the text fallback to read aloud. */
 export function speakHit(hit: Hit, buildings: Building[], now: string): string {
   const e = hit.event;
-  return `${e.title} at ${buildingName(e.buildingId, buildings)}, ${when(hit, now)}${e.freeFood ? ', with free food' : ''}.`;
+  return `${clean(e.title, 120)} at ${buildingName(e.buildingId, buildings)}, ${when(hit, now)}${e.freeFood ? ', with free food' : ''}.`;
 }

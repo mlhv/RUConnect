@@ -20,11 +20,17 @@ export function VoicePanel() {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const demoNow = useRef<string | null>(null);
+  const transcriptRef = useRef<HTMLUListElement>(null);
   const now = () => demoNow.current ?? new Date().toISOString();
 
   useEffect(() => {
     api.config().then((c) => { demoNow.current = c.now; }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const el = transcriptRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [lines]);
 
   const tools = useMemo(
     () =>
@@ -46,18 +52,23 @@ export function VoicePanel() {
     setBusy(true);
     dispatch({ type: 'add', role: 'user', text: sentence });
     dispatch({ type: 'add', role: 'tool', text: 'Searching events…' });
-    const said = await runFallback(sentence, {
-      tools, getBuildings: () => useEventsStore.getState().buildings, now, speak,
-    });
-    dispatch({ type: 'add', role: 'agent', text: said });
-    setBusy(false);
+    try {
+      const said = await runFallback(sentence, {
+        tools, getBuildings: () => useEventsStore.getState().buildings, now, speak,
+      });
+      dispatch({ type: 'add', role: 'agent', text: said });
+    } catch {
+      dispatch({ type: 'add', role: 'agent', text: 'Something went wrong. Try again.' });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <section className="panel">
       <h2>Ask</h2>
       {lines.length > 0 && (
-        <ul className="voice-transcript">
+        <ul className="voice-transcript" ref={transcriptRef}>
           {lines.map((l) => <li key={l.id} className={l.role}>{l.text}</li>)}
         </ul>
       )}

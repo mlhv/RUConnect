@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { runFallback } from './fallback';
-import type { SearchRequest, SearchResponse } from './searchApi';
+import { SearchError, type SearchRequest, SearchResponse } from './searchApi';
 import { NOW, buildings, fakeMap, hit } from './testData';
 import { createTools } from './tools';
 
-function setup(response: SearchResponse) {
+function setup(response: SearchResponse | Error) {
   const { map, calls } = fakeMap();
-  const search = vi.fn(async (_req: SearchRequest) => response);
+  const search = vi.fn(async (_req: SearchRequest) => {
+    if (response instanceof Error) throw response;
+    return response;
+  });
   const tools = createTools({ search, map, getBuildings: () => buildings, getEvents: () => [], now: () => NOW });
   const spoken: string[] = [];
   const deps = { tools, getBuildings: () => buildings, now: () => NOW, speak: (t: string) => void spoken.push(t) };
@@ -36,6 +39,20 @@ describe('runFallback', () => {
     expect(said).toBe('I could not find anything like that right now. Try different interests.');
     expect(spoken).toEqual([said]);
     expect(calls.some((c) => c.startsWith('flyTo'))).toBe(false);
+  });
+
+  it('says search is unavailable when the search fails, without moving the camera', async () => {
+    const { deps, calls, spoken } = setup(new SearchError('server_error'));
+    const said = await runFallback('robotics', deps);
+    expect(said).toBe('Search is unavailable right now. Try again in a moment.');
+    expect(spoken).toEqual([said]);
+    expect(calls.some((c) => c.startsWith('flyTo'))).toBe(false);
+  });
+
+  it('cuts the query to the 200 characters the server accepts', async () => {
+    const { deps, search } = setup({ matches: [], later: [] });
+    await runFallback('robotics '.repeat(28), deps);
+    expect(search.mock.calls[0][0].query).toHaveLength(200);
   });
 
   it('ignores a blank sentence', async () => {
