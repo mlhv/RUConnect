@@ -11,7 +11,9 @@ Seen in Chrome on Oct 11 with a real `VITE_MAPBOX_TOKEN`, `MOCK=0`, and the type
 - The basemap's own buildings are drawn as dim 3D context (`ru-context-3d`). A `distance` filter hides the basemap's copy of each of our 12, so the two never overlap.
 - `flyTo` eases in and out over about 3 seconds while swinging the camera round, then circles the building slowly. Any map input, or another flight, stops the circling.
 - Attendance beacons: a thin column stands on the roof of each active building, in its category color, taller for a bigger expected crowd (`beaconHeightM` in `activity.ts`, square-root scale from 10 m to 100 m). The column stands at the building's center, which for a U-shaped building (The Yard, Honors College) is over the courtyard.
-- The slider has a play button: it steps 15 minutes about twice a second and stops at the end of the day or when the slider is dragged. Pressed at the end of the day, it restarts from 8 AM.
+- The slider has a play button: it moves the clock 3 minutes about 11 times a second, so the label and thumb glide, and stops at the end of the day or when the slider is dragged. Pressed at the end of the day, it restarts from 8 AM. Dragging still snaps to 15 minutes.
+- Nothing switches abruptly: a building's color, glow, label, and beacon height ease towards their targets over a few tenths of a second (`approach` in `fade.ts`, `FADE_TAU_MS` in `index.tsx`). One frame loop in `index.tsx` owns every feature state; the React effects only set targets.
+- Roof labels have their own source (`ru-labels`). A source with a text layer is not drawn until the map's fonts load, and when the labels shared the buildings' source the buildings appeared several seconds late on a cold load.
 - On load the camera eases in to its opening view over about 4 seconds.
 - `flyTo` pads the camera so the target lands clear of the sidebar (`cameraPadding` in `geo.ts`). The padding assumes the sidebar size in `client/src/app/app.css`; change both together.
 - A typed voice question highlights its results, moves the slider, flies to the top pick, and opens its panel.
@@ -28,13 +30,13 @@ Seen in Chrome on Oct 11 with a real `VITE_MAPBOX_TOKEN`, `MOCK=0`, and the type
 - The console warns once about `symbol-z-elevate` and `symbol-z-order`. It is harmless.
 - "Academic Building" uses the West Wing outline only; the building has two wings and the schema holds one ring.
 - "The Yard" uses the outline OpenStreetMap names Sojourner Truth Apartments (40 College Ave).
-- The pulse must stay a feature state. Changing the layer's paint expression every frame reloads the building tiles and the colors disappear.
+- Everything animated must stay a feature state. Changing a layer's paint expression every frame reloads the building tiles and the colors disappear.
 - The sidebar (voice above ingest) can run past the bottom of a short screen. It lives in frozen `client/src/app/`.
 
 ## Where things live
 `client/src/map/`:
-- `index.tsx`: map setup, controller, click handling, the pulse loop.
+- `index.tsx`: map setup, controller, click handling, the frame loop.
 - `BuildingPanel.tsx`, `map.css`: the panel. `panel.ts`: which events it lists.
-- `activity.ts`: category colors and which category a building shows.
+- `activity.ts`: category colors, which category a building shows, and beacon heights. `fade.ts`: the easing step.
 - `geo.ts`: GeoJSON conversion and camera padding. `time.ts`, `TimeSlider.tsx`: the slider.
 - `testEvent.ts`: event builder for this slice's tests.

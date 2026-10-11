@@ -1,5 +1,5 @@
 import type { Building } from '@ruconnect/shared';
-import type { FeatureCollection, Polygon } from 'geojson';
+import type { FeatureCollection, Point, Polygon } from 'geojson';
 
 export function buildingsToGeoJSON(buildings: Building[]): FeatureCollection<Polygon> {
   return {
@@ -26,18 +26,11 @@ const BEACON_RADIUS_M = 3;
 const BEACON_SIDES = 16;
 const M_PER_DEG_LAT = 111_320;
 
-export interface Beacon {
-  heightM: number;
-  color: string;
-}
-
-/** A thin column standing on the roof of each building that has a beacon, at the building's centre. */
-export function beaconsToGeoJSON(buildings: Building[], beacons: Map<string, Beacon>): FeatureCollection<Polygon> {
+/** A thin column at the centre of every building. Its height above the roof is a feature state, not data. */
+export function beaconsToGeoJSON(buildings: Building[]): FeatureCollection<Polygon> {
   return {
     type: 'FeatureCollection',
-    features: buildings.flatMap((b) => {
-      const beacon = beacons.get(b.id);
-      if (!beacon) return [];
+    features: buildings.map((b) => {
       const mPerDegLng = M_PER_DEG_LAT * Math.cos((b.lat * Math.PI) / 180);
       const ring = Array.from({ length: BEACON_SIDES + 1 }, (_, i) => {
         const angle = ((i % BEACON_SIDES) / BEACON_SIDES) * 2 * Math.PI;
@@ -46,11 +39,26 @@ export function beaconsToGeoJSON(buildings: Building[], beacons: Map<string, Bea
           b.lat + (BEACON_RADIUS_M * Math.sin(angle)) / M_PER_DEG_LAT,
         ];
       });
-      return [{
+      return {
         type: 'Feature' as const,
-        properties: { id: b.id, baseM: b.heightM, topM: b.heightM + beacon.heightM, color: beacon.color },
+        properties: { id: b.id, baseM: b.heightM },
         geometry: { type: 'Polygon' as const, coordinates: [ring] },
-      }];
+      };
     }),
+  };
+}
+
+/**
+ * One named point per building, for the roof labels. They have their own source because a source
+ * with a text layer is not drawn until the map's fonts have loaded, which would hold up the buildings.
+ */
+export function labelsToGeoJSON(buildings: Building[]): FeatureCollection<Point> {
+  return {
+    type: 'FeatureCollection',
+    features: buildings.map((b) => ({
+      type: 'Feature',
+      properties: { id: b.id, name: b.name },
+      geometry: { type: 'Point', coordinates: [b.lng, b.lat] },
+    })),
   };
 }

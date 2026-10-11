@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SLIDER_STEPS, nextStep, sliderIndex, timeAtIndex } from './time';
+import { SLIDER_STEPS, nextStep, sliderIndex, sliderPosition, timeAtIndex } from './time';
 
 describe('time slider math', () => {
   const noon = '2026-10-10T16:07:00.000Z';
@@ -31,5 +31,25 @@ describe('nextStep', () => {
 
   it('returns null at the last step of the day', () => {
     expect(nextStep(timeAtIndex(noon, SLIDER_STEPS - 1))).toBeNull();
+  });
+});
+
+describe('playback steps', () => {
+  const noon = '2026-10-10T16:07:00.000Z';
+
+  it('advances by a custom step shorter than a slider step', () => {
+    const start = timeAtIndex(noon, 54);
+    expect(Date.parse(nextStep(start, 3 * 60_000)!) - Date.parse(start)).toBe(3 * 60_000);
+  });
+
+  it('never runs past the last slider step of the day', () => {
+    const nearEnd = new Date(Date.parse(timeAtIndex(noon, SLIDER_STEPS - 1)) - 60_000).toISOString();
+    expect(nextStep(nearEnd, 3 * 60_000)).toBeNull();
+  });
+
+  it('places an instant between two slider steps', () => {
+    const start = timeAtIndex(noon, 54);
+    expect(sliderPosition(start)).toBe(54);
+    expect(sliderPosition(new Date(Date.parse(start) + 3 * 60_000).toISOString())).toBeCloseTo(54.2);
   });
 });
