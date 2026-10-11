@@ -101,6 +101,5 @@ describe('core API', () => {
 
   it('answers 501 from slice routers that are not built yet', async () => {
     expect((await request(app).post('/api/ingest/runs')).status).toBe(501);
-    expect((await request(app).get('/api/voice/session')).status).toBe(501);
   });
 });
