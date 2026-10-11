@@ -1,6 +1,6 @@
 export interface Line {
   id: number;
-  role: 'user' | 'agent' | 'tool' | 'system';
+  role: 'user' | 'agent' | 'tool' | 'system' | 'meaning';
   text: string;
 }
 

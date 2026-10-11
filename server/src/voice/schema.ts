@@ -19,6 +19,8 @@ export const HitSchema = z.object({
   endsAfterWindow: z.boolean(),
   /** False only when the query has interest words, none of them appears in the event's text, and the event is not close to it in meaning. */
   matchesQuery: z.boolean(),
+  /** True when the event matches the query by meaning alone: vector similarity found it and no query word appears in its text. */
+  semantic: z.boolean(),
 });
 export type Hit = z.infer<typeof HitSchema>;
 
