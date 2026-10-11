@@ -160,6 +160,24 @@ describe('rankEvents', () => {
     expect(all({ query: "I'm free until 4, what's near the library?", nearBuildingId: 'alexander-library' })).toBe(true);
   });
 
+  it('lifts an event that is close in meaning even when it shares no word with the query', () => {
+    const req = { query: 'somewhere to unwind with friends' };
+    expect(ids(rankEvents(events, buildings, req, NOW).matches)[0]).not.toBe('study');
+    const res = rankEvents(events, buildings, req, NOW, new Map([['study', 0.74], ['build', 0.52], ['drones', 0.5]]));
+    expect(ids(res.matches)[0]).toBe('study');
+  });
+
+  it('counts a close meaning as matching the query, and a distant one as not', () => {
+    const res = rankEvents(events, buildings, { query: 'unwind' }, NOW, new Map([['study', 0.74], ['build', 0.52]]));
+    const flags = Object.fromEntries(res.matches.map((h) => [h.event.id, h.matchesQuery]));
+    expect(flags).toMatchObject({ study: true, build: false, drones: false });
+  });
+
+  it('keeps a word match ahead of a weak similarity', () => {
+    const res = rankEvents(events, buildings, { query: 'robotics' }, NOW, new Map([['study', 0.56], ['build', 0.6]]));
+    expect(ids(res.matches).indexOf('build')).toBeLessThan(ids(res.matches).indexOf('study'));
+  });
+
   it('survives an event whose building is not in the list', () => {
     const orphan = parseSeedEvents([ev('lost', 'Robotics Pop-up', 'club', 'nowhere', '14:00', '15:00')]);
     const res = rankEvents(orphan, buildings, { query: 'robotics', nearBuildingId: 'alexander-library' }, NOW);
